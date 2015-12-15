@@ -3,7 +3,8 @@ This package hooks into the ```jrflab/modules``` sequencing pipeline for tailore
 
 ## subsetRecurrence
 [in progress]
-Builds a prevelance-ordered subsetted heatmap + table of recurrent mutations from the master recurrent mutation table.
+
+Builds a prevelance-ordered, subsetted heatmap + table of recurrent mutations from the master recurrent mutation table.
 
 ### Prerequisites
 From root project directory:
