@@ -70,4 +70,4 @@ for (subnum in 1:nrow(subsets)){
 
 }
 
-print("Complete")
+cat("* complete *\n")
