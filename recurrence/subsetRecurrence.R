@@ -22,7 +22,7 @@ buildD<-function(samples){
 
 	D<-data.frame(do.call(cbind,Dl))
 	row.names(D)<-rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ANN....GENE_SPLIT))))
-	colnames(D)<-samples
+	colnames(D)<-rev(samples)
 	return(D)
 }
 
