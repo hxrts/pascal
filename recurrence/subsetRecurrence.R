@@ -59,17 +59,19 @@ heatM<-function(D,name){
 
 for (subnum in 1:nrow(subsets)){
 
+	# input processing
 	line<-as.vector(subsets[subnum,])
 	subset<-line[line!=""][-1]
 	name<-line[[1]][1]
-
 	muts<-mutfile[which(mutfile$TUMOR_SAMPLE%in%subset),]
 
+	# write out tables
 	write.table(muts,file=paste("recurrent_mutations/",name,"_recurrent.txt",sep=""),quote=FALSE,sep="\t",row.names=FALSE)
 
+	# execute functions
 	heat<-buildD(subset)
 	heatM(heat,name)
 
 }
 
-cat("* complete *\n")
+cat("* complete\n")
