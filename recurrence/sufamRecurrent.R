@@ -27,7 +27,7 @@ runSufam<-function(muts,name,subset){
 		print(sprintf("  sufam command: ",cmd,"\n"))
 		system(cmd)
 	}
-})
+}
 
 #----------
 # main loop
