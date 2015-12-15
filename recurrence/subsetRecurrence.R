@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 #------
 # input
 #------
@@ -9,15 +11,23 @@ mutfile<-read.delim("recurrent_mutations/recurrent_mutations.tsv",sep="\t",strin
 # function definitions
 #---------------------
 
-buildD<-function(samples){	# create mutation count data.frame
-	Dl<-lapply(samples,function(sample)unlist(lapply(rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ANN....GENE_SPLIT	)))),function(gene)	nrow(subset(muts[which(muts$TUMOR_SAMPLE%in%samples),],TUMOR_SAMPLE==sample&ANN....GENE_SPLIT==gene)))))
+# create mutation count data.frame
+buildD<-function(samples){
+
+	Dl<-lapply(samples,function(sample)
+		unlist(lapply(rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ANN....GENE_SPLIT	)))),function(gene)
+			nrow(subset(muts[which(muts$TUMOR_SAMPLE%in%samples),],TUMOR_SAMPLE==sample&ANN....GENE_SPLIT==gene)))
+			)
+		)
+
 	D<-data.frame(do.call(cbind,Dl))
 	row.names(D)<-rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ANN....GENE_SPLIT))))
 	colnames(D)<-samples
 	return(D)
 }
 
-heatM<-function(D,file){	# draw heatmap
+# draw heatmap
+heatM<-function(D,file){
 	colorRamp<-colorRampPalette(c("white","blue"))(max(D)+1)
 	matrixpar=list(mfrow=c(2,1),mar=c(1,3,1,1),oma=c(2,2,2,2))  # mar/oma - bottom, left, top, right
 	pdf(file)
@@ -45,11 +55,11 @@ heatM<-function(D,file){	# draw heatmap
 # main loop
 #----------
 
-lapply(1:nrow(subsets), function(subnum){
+for (subnum in 1:nrow(subsets)){
 
-	line<-subsets[subnum,]
+	line<-as.vector(subsets[subnum,])
 	subset<-line[line!=""][-1]
-	name<-line[1]
+	name<-line[[1]][1]
 
 	muts<-mutfile[which(mutfile$TUMOR_SAMPLE%in%subset),]
 
@@ -57,7 +67,7 @@ lapply(1:nrow(subsets), function(subnum){
 
 	heat<-buildD(subset)
 	heatM(heat,paste(name,"_recurrent.pdf",sep=""))
-	
-})
+
+}
 
 
