@@ -14,8 +14,6 @@ subsetName2 sample1 sample3 sample4
 ```
 
 ## subsetRecurrence
-[functional, additional features in-progress]
-
 Builds a prevelance-ordered, subsetted heatmap + table of recurrent mutations from the master recurrent mutation table.
 
 ### Prerequisites
@@ -25,7 +23,7 @@ Builds a prevelance-ordered, subsetted heatmap + table of recurrent mutations fr
 ### Run
 ```Rscript pascal/recurrence/subsetRecurrence.R```
 
-Generates heatmap .pdf and table files in ```recurrent_mutations``` directory within project root.
+Generates heatmap .pdf and table files in recurrent_mutations directory within project root.
 
 ## sufamRecurrent
 Performs base-truth recurrent mutation lookups in the .bam files of all samples within subsets.
