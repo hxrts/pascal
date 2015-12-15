@@ -18,7 +18,7 @@ subsetName1 sample1 sample2
 subsetName2 sample1 sample3 sample4
 ```
 
-## Run
+### Run
 ```Rscript pascal/recurrence/subsetRecurrence.R```
 
 Generates heatmap .pdf and table files in ```recurrent_mutations``` directory within project root.
