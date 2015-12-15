@@ -32,7 +32,7 @@ Performs base-truth recurrent mutation lookups in the .bam files of all samples 
 
 * requires: ```make recurrent_mutations```
 
-## Run
+### Run
 ```Rscript pascal/recurrence/sufamRecurrent.R```
 
 Generates log file in log directory, vcf and sufam output .tsv in recurrent_mutations directory.
