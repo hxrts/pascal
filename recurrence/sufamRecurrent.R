@@ -24,7 +24,6 @@ runSufam<-function(muts,name,subset){
 	for (samplenum in 1:length(subset)){
 		sample<-subset[samplenum]
 		cmd<-paste("sufam /ifs/e63data/reis-filho/reference/human_g1k_v37.fa recurrent_mutations/",name,"_recurrent.vcf bam/",sample,".bam 2> log/",sample,"_sufamRecurrent.log > recurrent_mutations/",sample,"_sufamRecurrent.tsv",sep="")
-		print(sprintf("  sufam command: ",cmd,"\n"))
 		system(cmd)
 	}
 }
@@ -41,10 +40,7 @@ for (subnum in 1:nrow(subsets)){
 	name<-line[[1]][1]
 	muts<-mutfile[which(mutfile$TUMOR_SAMPLE%in%subset),]
 
-	print(sprintf("* running sample set ",name,"\n"))
-	print(sprintf("* building VCF files\n")
 	buildVCF(muts,name)
-	print(sprintf("running sufam on sample: ",name,"\n"))
 	runSufam(muts,name,subset)
 
 }
