@@ -66,7 +66,7 @@ for (subnum in 1:nrow(subsets)){
 	write.table(muts,file=paste("recurrent_mutations/",name,"_recurrent.txt",sep=""),quote=FALSE,sep="\t",row.names=FALSE)
 
 	heat<-buildD(subset)
-	heatM(heat,paste(name,"_recurrent.pdf",sep=""))
+	heatM(heat,paste("recurrent_mutations/",name,"_recurrent.pdf",sep=""))
 
 }
 
