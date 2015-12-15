@@ -2,7 +2,7 @@
 This package hooks into the ```jrflab/modules``` sequencing pipeline for tailored / dynamic analysis.
 
 ## subsetRecurrence
-[in progress]
+[functional, additional features in-progress]
 
 Builds a prevelance-ordered, subsetted heatmap + table of recurrent mutations from the master recurrent mutation table.
 
@@ -18,7 +18,7 @@ subsetName1 sample1 sample2
 subsetName2 sample1 sample3 sample4
 ```
 
-# Run
+### Run
 ```Rscript pascal/recurrence/subsetRecurrence.R```
 
 Generates heatmap .pdf and table files in ```recurrent_mutations``` directory within project root.
