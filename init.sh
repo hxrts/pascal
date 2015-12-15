@@ -1,3 +1,3 @@
 #!/bin/sh
 
-touch ../subsets.txt ../events.txt
+touch subsets.txt events.txt
