@@ -47,7 +47,7 @@ heatM<-function(D,name){
 		colorLevels<-min(D):max(D)
 		image(1,colorLevels,matrix(data=colorLevels,ncol=length(colorLevels),nrow=1),col=colorRamp,xlab="",ylab="",xaxt="n",axes=FALSE)
 		axis(2,at=min(D):max(D),labels=min(D):max(D),las=1,cex.axis=0.6)
-		grid(nx=ncol(D),ny=nrow(D),col="gray92",lty=1,lwd=par("lwd"),equilogs=TRUE)
+		grid(nx=1,ny=length(colorLevels),col="gray92",lty=1,lwd=par("lwd"),equilogs=TRUE)
 		box("plot")
 
 	dev.off()
