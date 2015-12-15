@@ -19,6 +19,7 @@ Builds a prevelance-ordered, subsetted heatmap + table of recurrent mutations fr
 ### Prerequisites
 
 * requires: ```make recurrent_mutations```
+* working installation of [sufam](https://github.com/inodb/sufam)
 
 ### Run
 ```Rscript pascal/recurrence/subsetRecurrence.R```
