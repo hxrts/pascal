@@ -12,33 +12,45 @@ mutfile<-read.delim("recurrent_mutations/recurrent_mutations.tsv",sep="\t",strin
 #---------------------
 
 # create mutation count data.frame
-buildD<-function(samples){
+buildD<-function(muts,samples,groupEventsByGene){
 
-	Dl<-lapply(samples,function(sample)
-		unlist(lapply(rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ANN....GENE_SPLIT	)))),function(gene)
-			nrow(subset(muts[which(muts$TUMOR_SAMPLE%in%samples),],TUMOR_SAMPLE==sample&ANN....GENE_SPLIT==gene)))
+	if(groupEventsByGene==TRUE){
+		Dl<-lapply(samples,function(sample)
+			unlist(lapply(rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ANN....GENE_SPLIT)))),function(gene)
+				nrow(subset(muts[which(muts$TUMOR_SAMPLE%in%samples),],TUMOR_SAMPLE==sample&ANN....GENE_SPLIT==gene)))
+				)
 			)
-		)
+		D<-data.frame(do.call(cbind,Dl))
+		row.names(D)<-rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ANN....GENE_SPLIT))))
+	}
+	if(groupEventsByGene==FALSE){
+		Dl<-lapply(samples,function(sample)
+			unlist(lapply(rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ID)))),function(id)
+				nrow(subset(muts[which(muts$TUMOR_SAMPLE%in%samples),],TUMOR_SAMPLE==sample&ID==id)))
+				)
+			)
+		D<-data.frame(do.call(cbind,Dl))
+		row.names(D)<-rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ID))))
+	}
 
-	D<-data.frame(do.call(cbind,Dl))
-	row.names(D)<-rev(names(sort(table(muts[which(muts$TUMOR_SAMPLE%in%samples),]$ANN....GENE_SPLIT))))
-	colnames(D)<-rev(samples)
+	colnames(D)<-samples
 	return(D)
 }
 
 # draw heatmap
-heatM<-function(D,name){
+heatM<-function(D,name,groupEventsByGene){
 	colorRamp<-colorRampPalette(c("white","blue"))(max(D)+1)
 	matrixpar=list(mfrow=c(2,1),mar=c(2,3,1,1),oma=c(2,2,2,2))  # mar/oma - bottom, left, top, right
-	pdf(paste("recurrent_mutations/",name,"_recurrent.pdf",sep=""))
+	if(groupEventsByGene==TRUE){pdfname<-paste("recurrent_mutations/",name,"_recurrent.pdf",sep="")}else{pdfname<-paste("recurrent_mutations/",name,"_eventsGroupedByGene_recurrent.pdf",sep="")}
+	pdf(pdfname)
 		par(matrixpar)
 		layout(matrix(1:2,ncol=2), widths=c(11,1), heights=c(1,1))
 
 		# plot
 		image(1:ncol(D),1:nrow(D),z=t(as.matrix(D[nrow(D):1,])),col=colorRamp,xlab="",ylab="",axes=FALSE)
 		title(main=name,line=0.5,cex.main=0.8)
-		axis(1,at=ncol(D):1,labels=names(D),cex.axis=0.6,las=2)			# x-axis
-		axis(2,at=nrow(D):1,labels=row.names(D),cex.axis=0.45,las=1)	# y-axis
+		axis(1,at=ncol(D):1,labels=rev(names(D)),cex.axis=0.6,las=2)			# x-axis
+		axis(2,at=nrow(D):1,labels=row.names(D),cex.axis=0.40,las=1)	# y-axis
 		grid(nx=ncol(D),ny=nrow(D),col="gray92",lty=1,lwd=par("lwd"),equilogs=TRUE)
 		box("plot")
 
@@ -61,16 +73,23 @@ for (subnum in 1:nrow(subsets)){
 
 	# input processing
 	line<-as.vector(subsets[subnum,])
-	subset<-line[line!=""][-1]
+	samples<-line[line!=""][-1]
 	name<-line[[1]][1]
-	muts<-mutfile[which(mutfile$TUMOR_SAMPLE%in%subset),]
+	muts<-mutfile[which(mutfile$TUMOR_SAMPLE%in%samples),]
 
 	# write out tables
 	write.table(muts,file=paste("recurrent_mutations/",name,"_recurrent.txt",sep=""),quote=FALSE,sep="\t",row.names=FALSE)
 
-	# execute functions
-	heat<-buildD(subset)
-	heatM(heat,name)
+	# create unique mut IDs
+	muts$ID<-apply(muts[,c("CHROM","POS","ANN....GENE_SPLIT")],1,function(x)paste(strip(x[c(3,1,2)]),collapse=":"))
+
+	# group events by gene
+	heat<-buildD(muts,samples,groupEventsByGene=TRUE)
+	heatM(heat,name,groupEventsByGene=TRUE)
+
+	# stratify events within the same gene
+	heat<-buildD(muts,samples,groupEventsByGene=FALSE)
+	heatM(heat,name,groupEventsByGene=FALSE)
 
 }
 
