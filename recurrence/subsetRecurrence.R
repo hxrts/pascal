@@ -39,26 +39,33 @@ buildD<-function(muts,samples,groupEventsByGene){
 
 # draw heatmap
 heatM<-function(D,name,groupEventsByGene){
+
+	if(groupEventsByGene==TRUE){
+		pdfname<-paste("recurrent_mutations/",name,"_recurrent.pdf",sep="")
+	}else{
+		pdfname<-paste("recurrent_mutations/",name,"_eventsGroupedByGene_recurrent.pdf",sep="")
+	}
+
 	colorRamp<-colorRampPalette(c("white","blue"))(max(D)+1)
-	matrixpar=list(mfrow=c(2,1),mar=c(2,3,1,1),oma=c(2,2,2,2))  # mar/oma - bottom, left, top, right
-	if(groupEventsByGene==TRUE){pdfname<-paste("recurrent_mutations/",name,"_recurrent.pdf",sep="")}else{pdfname<-paste("recurrent_mutations/",name,"_eventsGroupedByGene_recurrent.pdf",sep="")}
-	pdf(pdfname)
+	matrixpar=list(mfrow=c(2,1),mar=c(6,15,3,1),oma=c(1,1,1,1))  # mar/oma - bottom, left, top, right
+
+	pdf(pdfname,width=10,height=22)
 		par(matrixpar)
 		layout(matrix(1:2,ncol=2), widths=c(11,1), heights=c(1,1))
 
 		# plot
 		image(1:ncol(D),1:nrow(D),z=t(as.matrix(D[nrow(D):1,])),col=colorRamp,xlab="",ylab="",axes=FALSE)
-		title(main=name,line=0.5,cex.main=0.8)
-		axis(1,at=ncol(D):1,labels=rev(names(D)),cex.axis=0.6,las=2)			# x-axis
-		axis(2,at=nrow(D):1,labels=row.names(D),cex.axis=0.40,las=1)	# y-axis
+		title(main=name,line=0.7,cex.main=2)
+		axis(1,at=ncol(D):1,labels=rev(names(D)),cex.axis=1.5,las=2)	# x-axis
+		axis(2,at=nrow(D):1,labels=row.names(D),cex.axis=1.1,las=1)	# y-axis
 		grid(nx=ncol(D),ny=nrow(D),col="gray92",lty=1,lwd=par("lwd"),equilogs=TRUE)
 		box("plot")
 
 		# legend
-		par(mar=c(24,1,1,0))  # mar/oma - bottom, left, top, right
+		par(mar=c(99,3,3,0))  # mar/oma - bottom, left, top, right
 		colorLevels<-min(D):max(D)
 		image(1,colorLevels,matrix(data=colorLevels,ncol=length(colorLevels),nrow=1),col=colorRamp,xlab="",ylab="",xaxt="n",axes=FALSE)
-		axis(2,at=min(D):max(D),labels=min(D):max(D),las=1,cex.axis=0.6)
+		axis(2,at=min(D):max(D),labels=min(D):max(D),las=1,cex.axis=1.5)
 		grid(nx=1,ny=length(colorLevels),col="gray92",lty=1,lwd=par("lwd"),equilogs=TRUE)
 		box("plot")
 
