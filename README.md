@@ -43,7 +43,7 @@ Generates log file in log directory, vcf and sufam output .tsv in recurrent_muta
 ### Prerequisites
 
 * add genomic positions of interest to events.vcf, column headings required ```#CHROM	POS	ID	REF	ALT```
-* will run on all samples in the subsets.txt
+* will run on all samples found in subsets.txt
 
 ### Run
 
