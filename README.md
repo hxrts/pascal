@@ -36,4 +36,16 @@ Performs base-truth recurrent mutation lookups in the .bam files of all samples 
 ### Run
 ```Rscript pascal/recurrence/sufamRecurrent.R```
 
-Generates log file in log directory, vcf and sufam output .tsv in recurrent_mutations directory.
+Generates log file in log directory, vcf and sufam output .tsv in recurrent_mutations directory
+
+## sufamEventSearch
+
+### Prerequisites
+
+* add genomic positions of interest to events.vcf, column headings required ```#CHROM	POS	ID	REF	ALT```
+* will run on all samples in the subsets.txt
+
+### Run
+
+```Rscript pascal/recurrence/sufamEventSearch.R```
+
