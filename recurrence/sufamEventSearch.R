@@ -27,8 +27,10 @@ runSufam<-function(samples){
 
 for (subnum in 1:nrow(subsets)){
 
+	# remove subset name
 	line<-as.vector(subsets[subnum,])
 	subset<-line[line!=""][-1]
+
 	# samples to vector
 	samples<-unlist(unique(subset))
 
