@@ -4,7 +4,10 @@
 # input
 #------
 
-if(file.exists("events.vcf")==FALSE){print("* no events.vcf file")}
+if(file.exists("events.vcf")==FALSE){
+	print("* no events.vcf file")
+	exit()
+}
 subsets<-read.delim("subsets.txt",sep=" ",stringsAsFactors=FALSE,header=FALSE)
 
 #----------
