@@ -49,3 +49,14 @@ Generates log file in log directory, vcf and sufam output .tsv in recurrent_muta
 
 ```Rscript pascal/recurrence/sufamEventSearch.R```
 
+## PyClone
+
+### Prerequisites
+
+* make mutation_summary
+* make facets
+* will run on all samples found in subsets.txt
+
+### Run
+
+```Rscript pascal/recurrence/pyclone.R```
