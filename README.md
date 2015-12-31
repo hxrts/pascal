@@ -40,6 +40,8 @@ Generates log file in log directory, vcf and sufam output .tsv in recurrent_muta
 
 ## sufamEventSearch
 
+Use Sufam to arbitrarily search for base-truth genomic events in a sample subset by specifying a vcf file.
+
 ### Prerequisites
 
 * add genomic positions of interest to events.vcf, column headings required ```#CHROM	POS	ID	REF	ALT```
