@@ -9,12 +9,13 @@ suppressMessages(require(openxlsx))
 suppressMessages(require(plyr))
 suppressMessages(require(dplyr))
 
-suppressMessages(system("mkdir pyclone pyclone/config pyclone/events pyclone/priors pyclone/tables pyclone/plots"))
+suppressMessages(system("mkdir pyclone pyclone/config pyclone/events pyclone/priors pyclone/tables pyclone/plots &>/dev/null"))
 
 #------
 # input
 #------
 
+cat("reading input\n")
 subsets<-read.delim("subsets.txt",sep=" ",stringsAsFactors=FALSE,header=FALSE)
 muts<-read.xlsx("excel/mutation_summary.xlsx",sheet="SNV_HIGH_MODERATE_SUMMARY",check.names=TRUE)
 segfiles<-list.files("facets",pattern="*cncf.txt")
@@ -50,7 +51,7 @@ for (subnum in 1:nrow(subsets)){
 	subsamples<-line[line!=""][-1]
 	subname<-line[[1]][1]
 
-	suppressMessages(system(paste("mkdir",subname)))
+	suppressMessages(system(paste("mkdir",subname,"&>/dev/null")))
 
 	#----------------------------
 	# run-specific yaml variables
@@ -69,7 +70,7 @@ for (subnum in 1:nrow(subsets)){
 	# write yaml file
 	#----------------
 
-
+	cat("building subset yaml file: config/",subname,".config.yaml\n",sep="")
 	sink(file=paste("config/",subname,".config.yaml",sep=""))
 		cat(as.yaml(list(num_iters=num_iters,base_measure_params=base_measure_params,concentration=concentration,density=density,beta_binomial_precision_params=beta_binomial_precision_params,working_dir=working_dir,trace_dir=trace_dir,samples=samples)))
 	sink()
@@ -80,6 +81,7 @@ for (subnum in 1:nrow(subsets)){
 
 	for(sample in subsamples){
 
+		cat("building event file: events/",sample,".events.tsv\n",sep="")
 		submuts<-filter(muts,TUMOR_SAMPLE==sample)
 		submuts[submuts$CHROM=="X","CHROM"]<-23
 
@@ -101,21 +103,35 @@ for (subnum in 1:nrow(subsets)){
 
 		write.table(events,file=paste("events/",sample,".events.tsv",sep=""),row.names=FALSE,quote=FALSE,sep="\t")
 
+		#----------------------
 		# build mutations files
-		system(paste("source activate pyclone && PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml",sep=""))
+		#----------------------
+		cat("building mutations file: priors/",sample,".priors.yaml\n",sep="")
+		system(paste("source activate pyclone >/dev/null 2>&1 && PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml",sep=""))
 
 	}
 
+	#system(paste("source activate pyclone && PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml",sep=""))
+
+	#-----------------
 	# pyclone analysis
-	system(paste("source activate pyclone && PyClone run_analysis --config_file config/",subname,".config.yaml",sep=""))
+	#-----------------
+	cat("running PyClone simulation for sample",subname,"\n")
+	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone run_analysis --config_file config/",subname,".config.yaml",sep=""))
 
+	#-------------
 	# build tables
-	system(paste("source activate pyclone && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".loci.tsv --table_type loci",sep=""))
-	system(paste("source activate pyclone && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".cluster.tsv --table_type cluster",sep=""))
+	#-------------
+	cat("building analysis table for sample",subname,"\n")
+	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".loci.tsv --table_type loci",sep=""))
+	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".cluster.tsv --table_type cluster",sep=""))
 
+	#---------
 	# plotting
-	system(paste("source activate pyclone && PyClone plot_loci --config_file config/",subname,".config.yaml --plot_file plots/",subname,".loci.pdf --plot_type density",sep=""))
-	system(paste("source activate pyclone && PyClone plot_clusters --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density",sep=""))
+	#---------
+	cat("plotting results for sample",subname,"\n")
+	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone plot_loci --config_file config/",subname,".config.yaml --plot_file plots/",subname,".loci.pdf --plot_type density",sep=""))
+	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone plot_clusters --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density",sep=""))
 
 }
 
