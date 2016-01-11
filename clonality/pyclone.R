@@ -33,13 +33,13 @@ setwd("pyclone")	# for some reason PyClone needs to be run from the root directo
 #--------------------
 
 # assign unique mutation IDS
-muts$ID<-paste(muts$CHROM,muts$POS,muts$ANN....GENE,sep="-")
+muts$ID<-paste(muts$CHROM,muts$POS,muts$ANN....GENE,sep=":")
 
 #---------------------------------
 # variables for yaml configuration
 #---------------------------------
 
-num_iters=as.integer(1000)
+num_iters=as.integer(100000)
 base_measure_params<-list(alpha=as.integer(1),beta=as.integer(1))
 concentration<-list(value=as.integer(1),prior=list(shape=1.0,rate=0.001))
 density<-"pyclone_beta_binomial"
