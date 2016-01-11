@@ -11,8 +11,7 @@ suppressMessages(require(stringr))
 suppressMessages(require(tidyr))
 suppressMessages(require(crayon))
 
-system("mkdir subseek subseek/input subseek/subclones subseek/clusters subseek/dot &>/dev/null")
-# system("mkdir subseek subseek/segs subseek/clusters subseek/vcf subseek/db subseek/results &>/dev/null")
+system("mkdir subseek subseek/input subseek/subclones subseek/clusters subseek/dot subseek/log &>/dev/null")
 
 subseekpath="/ifs/e63data/reis-filho/usr/SubcloneSeeker/"
 
@@ -32,13 +31,6 @@ if(length(rmrow)>0){subsets<-subsets[-rmrow,]}
 #segfiles<-list.files("facets",pattern="*cncf.txt")
 clusterfiles<-list.files("pyclone/~archive/10000_steps/tables",pattern="*cluster.tsv")
 
-#--------------------
-# data pre-processing
-#--------------------
-
-# assign unique mutation IDS
-#muts$ID<-paste(muts$CHROM,muts$POS,muts$ANN....GENE,sep="-")
-
 #------------------------------
 # main loop over sample subsets
 #------------------------------
@@ -50,7 +42,7 @@ for (subnum in 1:nrow(subsets)){
 	subsamples<-line[line!=""][-1]
 	subname<-line[[1]][1]
 
-	cat(blue("\n--------------------------\n  beginning subset ",subname,"\n--------------------------\n\n",sep=""))
+	cat(blue("\n------------------------------------------\n  SUBCLONE SEEKER beginning subset ",subname,"\n------------------------------------------\n\n",sep=""))
 
 	#----------------------------
 	# build cluster files
@@ -68,60 +60,60 @@ for (subnum in 1:nrow(subsets)){
 		format(scientific = FALSE) ->
 		mclusters
 
-		# write cluster tsv files
-		clustertsv=str_c("subseek/input/",subname,".cluster.tsv")
-		write_tsv(mclusters,clustertsv,col_names=FALSE)	
+	# write cluster tsv files
+	clustertsv=str_c("subseek/input/",subname,".cluster.tsv")
+	write_tsv(mclusters,clustertsv,col_names=FALSE)	
 
-		# cluster2db
-		cmd=str_c(subseekpath,"utils/cluster2db ",clustertsv)
-		system(cmd)
+	# cluster2db
+	cmd=str_c(subseekpath,"utils/cluster2db ",clustertsv," > subseek/log/",subname,".cluster2db.log")
+	system(cmd)
 
-		# move primary db files to clusters dir
-		priclust=str_c("subseek/clusters/",subname,".cluster.pri.sqlite")
-		cmd=str_c("mv ",clustertsv,"-pri.sqlite ",priclust)
-		system(cmd)
+	# move primary db files to clusters dir
+	priclust=str_c("subseek/clusters/",subname,".cluster.pri.sqlite")
+	cmd=str_c("mv ",clustertsv,"-pri.sqlite ",priclust)
+	system(cmd)
 
-		# move relapse db files to clusters dir
-		relclust=str_c("subseek/clusters/",subname,".cluster.rel.sqlite")
-		cmd=str_c("mv ",clustertsv,"-rel.sqlite ",relclust)
-		system(cmd)
+	# move relapse db files to clusters dir
+	relclust=str_c("subseek/clusters/",subname,".cluster.rel.sqlite")
+	cmd=str_c("mv ",clustertsv,"-rel.sqlite ",relclust)
+	system(cmd)
 
-		# run ssmain on primary
-		prisub=str_c("subseek/subclones/",subname,".sub.pri.sqlite")
-		cmd=str_c(subseekpath,"utils/ssmain ",priclust," ",prisub," >/dev/null 2>&1")
-		system(cmd)
+	# run ssmain on primary
+	prisub=str_c("subseek/subclones/",subname,".sub.pri.sqlite")
+	cmd=str_c(subseekpath,"utils/ssmain ",priclust," ",prisub," > subseek/log/",subname,".pri.ssmain.log 2>&1")	# previously:	>/dev/null 2>&1
+	system(cmd)
 
-		# run ssmain on relapse
-		relsub=str_c("subseek/subclones/",subname,".sub.rel.sqlite")
-		cmd=str_c(subseekpath,"utils/ssmain ",relclust," ",relsub," >/dev/null 2>&1")
-		system(cmd)
+	# run ssmain on relapse
+	relsub=str_c("subseek/subclones/",subname,".sub.rel.sqlite")
+	cmd=str_c(subseekpath,"utils/ssmain ",relclust," ",relsub," > subseek/log/",subname,".rel.ssmain.log 2>&1")	# previously:	>/dev/null 2>&1
+	system(cmd)
 
-		# run treemerge on primary + relapse
-		cat(green("\n-") %+% " run treemerge on primary + relapse\n")
-		cmd=str_c(subseekpath,"utils/treemerge ",prisub," ",relsub)
-		system(cmd)
+	# run treemerge on primary + relapse
+	cat(green("\n-") %+% " run treemerge on primary + relapse\n")
+	cmd=str_c(subseekpath,"utils/treemerge ",prisub," ",relsub," > subseek/log/",subname,".treemerge.log 2>&1")
+	system(cmd)
 
-		# treeprint list
-		cat(green("\n-") %+% " treeprint list\n")
-		cmd=str_c(subseekpath,"utils/treeprint -l ",prisub)
-		system(cmd)
+	# treeprint list
+	cat(green("\n-") %+% " treeprint list\n")
+	cmd=str_c(subseekpath,"utils/treeprint -l ",prisub," > subseek/log/",subnum,".treeprint.log 2>&1")
+	system(cmd)
 
-		# # treeprint struct
-		# cat(green("\n-") %+% " treeprint struct\n")
-		# clusternum=2
-		# cmd=str_c(subseekpath,"utils/treeprint -r clusternum ",prisub)
-		# system(cmd)
+	# # treeprint struct
+	# cat(green("\n-") %+% " treeprint struct\n")
+	# clusternum=2
+	# cmd=str_c(subseekpath,"utils/treeprint -r clusternum ",prisub)
+	# system(cmd)
 
-		# # create dot file
-		# cat(green("\n-") %+% " create dot file\n")
-		# dotfile=str_c("subseek/dot/",subname,".dot")
-		# cmd=str_c(subseekpath,"utils/treeprint -r clusternum -g ",prisub," | tee ",dotfile)
-		# system(cmd)
+	# # create dot file
+	# cat(green("\n-") %+% " create dot file\n")
+	# dotfile=str_c("subseek/dot/",subname,".dot")
+	# cmd=str_c(subseekpath,"utils/treeprint -r clusternum -g ",prisub," | tee ",dotfile)
+	# system(cmd)
 
-		# # graphviz graph from dot
-		# cat(green("\n-") %+% " graphviz graph from dot\n")
-		# cmd=str_c("dot -Tpng -O ",dotfile)
-		# system(cmd)
+	# # graphviz graph from dot
+	# cat(green("\n-") %+% " graphviz graph from dot\n")
+	# cmd=str_c("dot -Tpng -O ",dotfile)
+	# system(cmd)
 
 }
 

@@ -53,7 +53,7 @@ for (subnum in 1:nrow(subsets)){
 	subsamples<-line[line!=""][-1]
 	subname<-line[[1]][1]
 
-	cat(blue("\n--------------------------\n  beginning subset ",subname,"\n--------------------------\n",sep=""))
+	cat(blue("\n--------------------------------\n  PHYLOWGS beginning subset ",subname,"\n-------------------------------\n",sep=""))
 
 	system(paste("mkdir",subname,"&>/dev/null"))
 

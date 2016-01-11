@@ -11,7 +11,7 @@ suppressMessages(library(stringr))
 suppressMessages(library(crayon))
 
 # create necessary directories
-system("mkdir schism schism/mutID schism/mutRCNA schism/config schism/out &>/dev/null")
+system("mkdir schism schism/mutID schism/mutRCNA &>/dev/null")
 
 subnum=samplenum=1
 
@@ -39,7 +39,7 @@ for (subnum in 1:nrow(subsets)){
 	subsamples<-line[line!=""][-1]
 	subname<-line[[1]][1]
 
-	cat(blue("\n--------------------------\n  beginning subset ",subname,"\n--------------------------\n",sep=""))
+	cat(blue("\n--------------------------------\n  SCHISM beginning subset ",subname,"\n--------------------------------\n",sep=""))
 
 	#-------------------
 	# build mutID tables
@@ -62,19 +62,21 @@ for (subnum in 1:nrow(subsets)){
 		mRC
 	write_tsv(mRC,str_c("schism/mutRCNA/mutRCNA.",subname,".tsv"))
 
+	system(str_c("mkdir schism/",subname," &>/dev/null"))
+
 	#----------------
 	# write yaml file
 	#----------------
 
 	cat(green("\n-") %+% " building configuration file:\n  schism/config/",subname,".config.yaml\n",sep="")
 
-	sink(file=str_c("schism/config/",subname,".config.yaml"))
+	sink(file=str_c("schism/",subname,".config.yaml"))
 		cat(as.yaml(list(
 
 			working_dir=str_c(getwd(),"/schism"),
 			mutation_to_cluster_assignment=str_c("mutID/mutID.",subname,".tsv"),
 			mutation_cellularity_input=str_c("mutRCNA/mutRCNA.",subname,".tsv"),
-			output_prefix="out.",
+			output_prefix=str_c(subname,"/",subname),
 			cellularity_estimation=str_c("mutRCNA/mutRCNA.",subname,".tsv"),
 
 			hypothesis_test=list(
@@ -96,6 +98,6 @@ for (subnum in 1:nrow(subsets)){
 
 	cat(green("\n-") %+% " running SCHISM algorithm\n",sep="")
 
-	system(str_c("runSchism analyze -c schism/config/",subname,".config.yaml"))
+	system(str_c("runSchism analyze -c schism/",subname,".config.yaml"))
 
 }

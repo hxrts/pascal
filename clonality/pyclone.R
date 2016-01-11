@@ -57,7 +57,7 @@ for (subnum in 1:nrow(subsets)){
 	subsamples<-line[line!=""][-1]
 	subname<-line[[1]][1]
 
-	cat(blue("\n--------------------------\n  beginning subset ",subname,"\n--------------------------\n",sep=""))
+	cat(blue("\n--------------------------------\n  PYCLONE beginning subset ",subname,"\n--------------------------------\n",sep=""))
 
 	system(paste("mkdir",subname,"&>/dev/null"))
 
@@ -89,7 +89,6 @@ for (subnum in 1:nrow(subsets)){
 
 	subevents=list()
 	for (samplenum in 1:length(subsamples)) {
-
 		sample=subsamples[samplenum]
 
 		submuts<-filter(muts,TUMOR_SAMPLE==sample)
