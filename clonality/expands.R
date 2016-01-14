@@ -14,7 +14,7 @@ suppressMessages(library(RColorBrewer))
 suppressMessages(library(colorspace))
 
 # create necessary directories
-suppressMessages(system("mkdir expands &>/dev/null"))
+system("mkdir expands &>/dev/null")
 
 # loop defaults for development
 subnum=samplenum=1
@@ -89,9 +89,13 @@ for (subnum in 1:nrow(subsets)){
 		exo<-runExPANdS(data.matrix(SNV),data.matrix(CBS),precision=0.01,snvF=str_c(sample,".",subname))
 		exolist<-c(exolist,list(exo))
 
-		#---------
-		# plotting
-		#---------
+	}
+
+	#---------
+	# plotting
+	#---------
+
+	lapply(exolist,function(exo){
 
 		cat(green("\n-") %+% " plotting sample " %+% sample %+% "\n")
 
@@ -102,8 +106,7 @@ for (subnum in 1:nrow(subsets)){
 		pdf(str_c(sample,".tree.pdf"))
 			plot(exo$tree,cex=2.5)
 		dev.off()
-
-	}
+	})
 
 	setwd("..")
 

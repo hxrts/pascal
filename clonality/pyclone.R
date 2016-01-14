@@ -11,7 +11,7 @@ suppressMessages(require(dplyr))
 suppressMessages(require(crayon))
 
 # create necessary directories
-suppressMessages(system("mkdir pyclone pyclone/config pyclone/events pyclone/priors pyclone/tables pyclone/plots &>/dev/null"))
+system("mkdir pyclone pyclone/config pyclone/events pyclone/priors pyclone/tables pyclone/plots &>/dev/null")
 
 #------
 # input
@@ -39,7 +39,7 @@ muts$ID<-paste(muts$CHROM,muts$POS,muts$ANN....GENE,sep=":")
 # variables for yaml configuration
 #---------------------------------
 
-num_iters=as.integer(100000)
+num_iters=as.integer(5000)
 base_measure_params<-list(alpha=as.integer(1),beta=as.integer(1))
 concentration<-list(value=as.integer(1),prior=list(shape=1.0,rate=0.001))
 density<-"pyclone_beta_binomial"
@@ -135,7 +135,7 @@ for (subnum in 1:nrow(subsets)){
 		write.table(subevents[samplenum],file=paste("events/",sample,".events.tsv",sep=""),row.names=FALSE,quote=FALSE,sep="\t")
 
 		cat("\n  priors/",sample,".priors.yaml\n",sep="")
-		system(paste("source activate pyclone >/dev/null 2>&1 && PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml",sep=""))
+		system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml",sep=""))
 
 	}
 
@@ -143,32 +143,29 @@ for (subnum in 1:nrow(subsets)){
 	# pyclone analysis
 	#-----------------
 	cat(green("\n-") %+% " running MCMC simulation:\n")
-	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone run_analysis --config_file config/",subname,".config.yaml",sep=""))
+	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone run_analysis --config_file config/",subname,".config.yaml",sep=""))
 
 	#-------------
 	# build tables
 	#-------------
 	cat(green("\n-") %+% " building analysis tables:\n  tables/",subname,".loci.tsv",sep="")
-	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".loci.tsv --table_type loci",sep=""))
+	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".loci.tsv --table_type loci",sep=""))
 	cat("\n  tables/",subname,".cluster.tsv\n",sep="")
-	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".cluster.tsv --table_type cluster",sep=""))
+	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".cluster.tsv --table_type cluster",sep=""))
 
 	#---------
 	# plotting
 	#---------
 	cat(green("\n-") %+% " plotting results:\n  plots/",subname,".loci.pdf",sep="")
-	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone plot_loci --config_file config/",subname,".config.yaml --plot_file plots/",subname,".loci.pdf --plot_type density",sep=""))
+	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone plot_loci --config_file config/",subname,".config.yaml --plot_file plots/",subname,".loci.pdf --plot_type density",sep=""))
 	cat("\n  plots/",subname,".cluster.pdf\n",sep="")
-	system(paste("source activate pyclone >/dev/null 2>&1 && PyClone plot_clusters --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density",sep=""))
-
-	#system(paste("source activate pyclone >/dev/null 2>&1 && PyClone plot_cellular_frequencies --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density",sep=""))
-	#PyClone plot_cellular_frequencies config.yaml cellular_frequencies/ --burnin 1000
+	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone plot_clusters --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density",sep=""))
 
 }
 
-#-------
-# PostPy
-#-------
+#-------------
+# PostPy paths
+#-------------
 
 #"/ifs/e63data/reis-filho/usr/PostPy/interval_analyser.py"
 #"/ifs/e63data/reis-filho/usr/PostPy/CI_filter.py"
