@@ -8,7 +8,10 @@ suppressMessages(require(yaml))
 suppressMessages(require(openxlsx))
 suppressMessages(require(plyr))
 suppressMessages(require(dplyr))
+suppressMessages(require(stringr))
 suppressMessages(require(crayon))
+
+sysprefix="umask 002 && unset PYTHONPATH && source /home/bermans/miniconda2/envs/pyclone/bin/activate /home/bermans/miniconda2/envs/pyclone >/dev/null 2>&1 && "
 
 # create necessary directories
 system("mkdir pyclone pyclone/config pyclone/events pyclone/priors pyclone/tables pyclone/plots &>/dev/null")
@@ -23,7 +26,7 @@ subsets<-read.delim("subsets.txt",sep=" ",stringsAsFactors=FALSE,header=FALSE)
 rmrow<-grep("#",subsets[,1])
 if(length(rmrow)>0){subsets<-subsets[-rmrow,]}
 
-muts<-read.xlsx("excel/mutation_summary.xlsx",sheet="SNV_HIGH_MODERATE_SUMMARY",check.names=TRUE)
+muts<-read.xlsx("summary/mutation_summary.xlsx",sheet="SNV_HIGH_MODERATE_SUMMARY",check.names=TRUE)
 segfiles<-list.files("facets",pattern="*cncf.txt")
 
 setwd("pyclone")	# for some reason PyClone needs to be run from the root directory
@@ -33,13 +36,13 @@ setwd("pyclone")	# for some reason PyClone needs to be run from the root directo
 #--------------------
 
 # assign unique mutation IDS
-muts$ID<-paste(muts$CHROM,muts$POS,muts$ANN....GENE,sep=":")
+muts$ID<-str_c(muts$CHROM,muts$POS,muts$ANN....GENE,sep=":")
 
 #---------------------------------
 # variables for yaml configuration
 #---------------------------------
 
-num_iters=as.integer(5000)
+num_iters=as.integer(50000)
 base_measure_params<-list(alpha=as.integer(1),beta=as.integer(1))
 concentration<-list(value=as.integer(1),prior=list(shape=1.0,rate=0.001))
 density<-"pyclone_beta_binomial"
@@ -59,7 +62,7 @@ for (subnum in 1:nrow(subsets)){
 
 	cat(blue("\n--------------------------------\n  PYCLONE beginning subset ",subname,"\n--------------------------------\n",sep=""))
 
-	system(paste("mkdir",subname,"&>/dev/null"))
+	system(str_c("mkdir ",subname," &>/dev/null"))
 
 	#----------------------------
 	# run-specific yaml variables
@@ -68,7 +71,7 @@ for (subnum in 1:nrow(subsets)){
 	trace_dir=subname
 	samples<-lapply(subsamples,function(sample)
 				list(
-					mutations_file=paste("priors/",sample,".priors.yaml",sep=""),
+					mutations_file=str_c("priors/",sample,".priors.yaml"),
 					tumour_content=list(value=1.0),
 					error_rate=0.001)
 			)
@@ -79,7 +82,7 @@ for (subnum in 1:nrow(subsets)){
 	#----------------
 
 	cat(green("\n-") %+% " building configuration file:\n  config/",subname,".config.yaml\n",sep="")
-	sink(file=paste("config/",subname,".config.yaml",sep=""))
+	sink(file=str_c("config/",subname,".config.yaml"))
 		cat(as.yaml(list(num_iters=num_iters,base_measure_params=base_measure_params,concentration=concentration,density=density,beta_binomial_precision_params=beta_binomial_precision_params,working_dir=working_dir,trace_dir=trace_dir,samples=samples)))
 	sink()
 
@@ -94,7 +97,7 @@ for (subnum in 1:nrow(subsets)){
 		submuts<-filter(muts,TUMOR_SAMPLE==sample)
 		submuts[submuts$CHROM=="X","CHROM"]<-23
 
-		seg<-read.delim(paste("../facets/",grep(paste(sample,"_",sep=""),segfiles,value=TRUE),sep=""))
+		seg<-read.delim(str_c("../facets/",grep(str_c(sample,"_",sep=""),segfiles,value=TRUE)))
 		seg<-seg[!is.na(seg$tcn.em)&!is.na(seg$lcn.em),]	# remove all rows with unassigned CN so midpoint assignment will find next closest segment
 
 		# assign muts to their nearest CN segment
@@ -132,10 +135,10 @@ for (subnum in 1:nrow(subsets)){
 		cat(green("\n-") %+% " building input files for sample ",sample,":",sep="")
 
 		cat("\n  events/",sample,".events.tsv",sep="")
-		write.table(subevents[samplenum],file=paste("events/",sample,".events.tsv",sep=""),row.names=FALSE,quote=FALSE,sep="\t")
+		write.table(subevents[samplenum],file=str_c("events/",sample,".events.tsv"),row.names=FALSE,quote=FALSE,sep="\t")
 
 		cat("\n  priors/",sample,".priors.yaml\n",sep="")
-		system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml",sep=""))
+		system(str_c("umask 002 && unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml"))
 
 	}
 
@@ -143,23 +146,23 @@ for (subnum in 1:nrow(subsets)){
 	# pyclone analysis
 	#-----------------
 	cat(green("\n-") %+% " running MCMC simulation:\n")
-	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone run_analysis --config_file config/",subname,".config.yaml",sep=""))
+	system(str_c(sysprefix,"PyClone run_analysis --config_file config/",subname,".config.yaml"))
 
 	#-------------
 	# build tables
 	#-------------
 	cat(green("\n-") %+% " building analysis tables:\n  tables/",subname,".loci.tsv",sep="")
-	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".loci.tsv --table_type loci",sep=""))
+	system(str_c(sysprefix,"PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".loci.tsv --table_type loci"))
 	cat("\n  tables/",subname,".cluster.tsv\n",sep="")
-	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".cluster.tsv --table_type cluster",sep=""))
+	system(str_c(sysprefix,"PyClone build_table --config_file config/",subname,".config.yaml --out_file tables/",subname,".cluster.tsv --table_type cluster"))
 
 	#---------
 	# plotting
 	#---------
 	cat(green("\n-") %+% " plotting results:\n  plots/",subname,".loci.pdf",sep="")
-	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone plot_loci --config_file config/",subname,".config.yaml --plot_file plots/",subname,".loci.pdf --plot_type density",sep=""))
+	system(str_c(sysprefix,"PyClone plot_loci --config_file config/",subname,".config.yaml --plot_file plots/",subname,".loci.pdf --plot_type density"))
 	cat("\n  plots/",subname,".cluster.pdf\n",sep="")
-	system(paste("unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone plot_clusters --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density",sep=""))
+	system(str_c(sysprefix,"PyClone plot_clusters --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density"))
 
 }
 

@@ -57,7 +57,7 @@ for (subnum in 1:nrow(subsets)){
 
 			# histogram with density plot
 			print(ggplot(data.frame(MAF), aes(x=MAF))+
-			geom_histogram(aes(y=..density..), binwidth=0.009, colour="black", fill="lightgrey")+
+			geom_histogram(aes(y=..density..), binwidth=0.009, colour="darkgrey", fill="lightgrey")+
 			stat_density(adjust=0.6,alpha=.5,colour="black",fill="darkblue")+
 			scale_color_brewer(palette="Accent")+
 			expand_limits(x = 0, y = 0)+
