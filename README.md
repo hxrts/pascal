@@ -61,4 +61,4 @@ Use Sufam to arbitrarily search for base-truth genomic events in a sample subset
 
 ### Run
 
-```Rscript pascal/recurrence/pyclone.R```
+```Rscript pascal/clonality/pyclone.R```
