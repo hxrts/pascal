@@ -4,12 +4,7 @@
 # initialization
 #---------------
 
-suppressMessages(require(yaml))
-suppressMessages(require(openxlsx))
-suppressMessages(require(plyr))
-suppressMessages(require(dplyr))
-suppressMessages(require(stringr))
-suppressMessages(require(crayon))
+suppressMessages(pacman::p_load(yaml,openxlsx,plyr,dplyr,readr,tidyr,magrittr,stringr,crayon))
 
 sysprefix="umask 002 && unset PYTHONPATH && source /home/bermans/miniconda2/envs/pyclone/bin/activate /home/bermans/miniconda2/envs/pyclone >/dev/null 2>&1 && "
 

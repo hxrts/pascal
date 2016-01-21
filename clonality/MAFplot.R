@@ -68,7 +68,7 @@ for (subnum in 1:nrow(subsets)){
 											axis.title.x=element_text(vjust=0.5),
 											axis.title.y=element_text(angle=90,vjust=0.5),
 											plot.margin = unit(c(1,1,1,1),"cm"))+
-			ggtitle(str_c(subname," MAF distribution")))
+			ggtitle(str_c(sample," MAF distribution")))
 
 		dev.off()
 

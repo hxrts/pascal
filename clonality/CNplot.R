@@ -75,14 +75,14 @@ for (subnum in 1:nrow(subsets)){
 		CN<-seg$cnlr.median
 		weights<-(seg$loc.end-seg$loc.start)/sum(as.numeric(seg$loc.end-seg$loc.start))
 		xlabel<-"Copy number log ratio"
-		plottitle<-str_c(subname," CN log ratio distribution")
+		plottitle<-str_c(sample," CN log ratio distribution")
 		pdfname<-str_c("CN/",subname,"/",sample,"_LOG_RATIO_CN_distribution.pdf")
 
 		printPlot(CN,weights,xlabel,plottitle,pdfname)
 
 		CN<-seg$tcn.em
 		weights<-(seg$loc.end-seg$loc.start)/sum(as.numeric(seg$loc.end-seg$loc.start))
-		plottitle<-str_c(subname," CN total copy number distribution")
+		plottitle<-str_c(sample," CN total copy number distribution")
 		xlabel<-"Total copy number"
 		pdfname<-str_c("CN/",subname,"/",sample,"_TOTAL_CN_distribution.pdf")
 
@@ -90,7 +90,7 @@ for (subnum in 1:nrow(subsets)){
 
 		CN<-seg$lcn.em
 		weights<-(seg$loc.end-seg$loc.start)/sum(as.numeric(seg$loc.end-seg$loc.start))
-		plottitle<-str_c(subname," CN lower copy number distribution")
+		plottitle<-str_c(sample," CN lower copy number distribution")
 		xlabel<-"Lower copy number"
 		pdfname<-str_c("CN/",subname,"/",sample,"_LOWER_CN_distribution.pdf")
 

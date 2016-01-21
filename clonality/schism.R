@@ -25,7 +25,7 @@ subsets<-read.delim("subsets.txt",sep=" ",stringsAsFactors=FALSE,header=FALSE)
 rmrow<-grep("#",subsets[,1])
 if(length(rmrow)>0){subsets<-subsets[-rmrow,]}
 
-muts<-read_tsv("excel/muts.tsv")
+muts<-read_tsv("summary/muts.tsv")
 segfiles<-list.files("facets",pattern="*cncf.txt")
 
 #------------------------------

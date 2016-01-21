@@ -29,7 +29,7 @@ subsets<-read.delim("subsets.txt",sep=" ",stringsAsFactors=FALSE,header=FALSE)
 rmrow<-grep("#",subsets[,1])
 if(length(rmrow)>0){subsets<-subsets[-rmrow,]}
 
-muts<-read_tsv("excel/muts.tsv")
+muts<-read_tsv("summary/muts.tsv")
 segfiles<-list.files("facets",pattern="*cncf.txt")
 
 #------------------------------
@@ -72,10 +72,10 @@ for (subnum in 1:nrow(subsets)){
 		# build CBS df
 		seg<-read_tsv(str_c("../../facets/",grep(str_c(sample,"_"),segfiles,value=TRUE)))
 		seg %>%
-			mutate(segmentLength=1+loc.end-loc.start) %>%
+			mutate(SEG_LENGTH=1+loc.end-loc.start) %>%
 			mutate(TUMOR_SAMPLE=unlist(lapply(ID,function(x)strsplit(x,"_")))[1]) %>%
 			filter(TUMOR_SAMPLE==sample) %>%
-			select(chr=chrom,startpos=loc.start,endpos=loc.end,CN_Estimate=lcn.em,segmentLength) %>%
+			select(chr=chrom,startpos=loc.start,endpos=loc.end,CN_Estimate=lcn.em,SEG_LENGTH) %>%
 			mutate(CN_Estimate=replace(CN_Estimate,which(is.na(CN_Estimate)),1)) %>%
 			mutate(CN_Estimate=round(CN_Estimate)) ->
 			CBS
@@ -100,7 +100,7 @@ for (subnum in 1:nrow(subsets)){
 		cat(green("\n-") %+% " plotting sample " %+% sample %+% "\n")
 
 		pdf(str_c(sample,".subpop.pdf"))
-			plotSPs(exo$dm,sample,cex=1)
+			print(plotSPs(exo$dm,sample,cex=1))
 		dev.off()
 
 		pdf(str_c(sample,".tree.pdf"))
@@ -140,12 +140,12 @@ for (subnum in 1:nrow(subsets)){
 
 	# plot rooted inter-sample phylogeny
 	pdf(str_c(subname,"/",subname,".meta.rooted.pdf"))
-		plot(subphylo,cex=1.4)
+		try(plot(subphylo,cex=1.4))
 	dev.off()
 
 	# plot unrooted inter-sample phylogeny
 	pdf(str_c(subname,"/",subname,".meta.unrooted.pdf"))
-		plot(subphylo, cex = 1.4, type="u")
+		try(plot(subphylo, cex = 1.4, type="u"))
 	dev.off()
 
 	#--------------------------------------
@@ -158,12 +158,12 @@ for (subnum in 1:nrow(subsets)){
 
 	# plot rooted inter-sample phylogeny
 	pdf(str_c(subname,"/",subname,".sub.rooted.pdf"))
-		plot(subphylo,cex=1.4)
+		try(plot(subphylo,cex=1.4))
 	dev.off()
 
 	# plot unrooted inter-sample phylogeny
 	pdf(str_c(subname,"/",subname,".sub.unrooted.pdf"))
-		plot(subphylo, cex = 1.4, type="u")
+		try(plot(subphylo, cex = 1.4, type="u"))
 	dev.off()
 
 	# tree<-root(drop.tip(subphylo,4),1)
