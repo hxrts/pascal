@@ -133,7 +133,7 @@ for (subnum in 1:nrow(subsets)){
 		write.table(subevents[samplenum],file=str_c("events/",sample,".events.tsv"),row.names=FALSE,quote=FALSE,sep="\t")
 
 		cat("\n  priors/",sample,".priors.yaml\n",sep="")
-		system(str_c("umask 002 && unset PYTHONPATH && source /home/limr/usr/anaconda/envs/pyclone/bin/activate /home/limr/usr/anaconda/envs/pyclone >/dev/null 2>&1 && PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml"))
+		system(str_c(sysprefix,"PyClone build_mutations_file --in_file events/",sample,".events.tsv --out_file priors/",sample,".priors.yaml"))
 
 	}
 
