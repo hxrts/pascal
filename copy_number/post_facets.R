@@ -21,12 +21,12 @@ breaks <- c(0,cumsum(table(chrom)[chrom %>% table %>% names %>% as.numeric %>% o
 
 for (samplename in grep("threshold",names(gcn),value=TRUE)){
 
-	cat(blue("*") %+% " sample:" %+% samplename %+% "\n  correcting chr:\n")
+	cat(blue("\n*") %+% " sample: " %+% samplename)
 
 	#loop over chromosomes in junction table
 	for(chromosome in 1:23){
 
-		cat("  ",chromosome,"..",sep="")
+		cat("\n   chr",formatC(chromosome, width=2, flag="0"),": ",sep="")
 		start<-breaks[chromosome]+1
 		end<-breaks[chromosome+1]
 		chbit <- rle(gcn[start:end,samplename])
@@ -37,14 +37,14 @@ for (samplename in grep("threshold",names(gcn),value=TRUE)){
 		}else{
 			# extend chromosome start calls from nearest integer on same chromosome
 			if(gcn[start,samplename]==3){
-				cat("start - ")
+				cat("start..")
 				NAbottom <- min(which(chbit$values==3))
 				Ibottom <- start + cumsum(chbit$lengths)[NAbottom]
 				gcn[start:(Ibottom-1),samplename] <- gcn[Ibottom,samplename]
 			}
 			# extend chromosome end calls from nearest integer on same chromosome
 			if(gcn[end,samplename]==3){
-				cat("end - ")
+				cat("end..")
 				NAtop <- min(which(rev(chbit$values==3)))
 				Itop <- end - cumsum(rev(chbit$lengths))[NAtop]
 				gcn[(Itop+1):end,samplename] <- gcn[Itop,samplename]
@@ -53,7 +53,7 @@ for (samplename in grep("threshold",names(gcn),value=TRUE)){
 
 		nav <- which(chbit$values[-c(1,length(chbit$values))]==3)+1
 		if(length(nav>0)){
-			cat("gaps\n")
+			cat("gaps..")
 			# find nearest neighbors of inner-chromosome gaps
 			gstarts <- cumsum(chbit$lengths)[nav-1]+start
 			glengths <- chbit$lengths[nav]
@@ -96,5 +96,5 @@ for (samplename in grep("threshold",names(gcn),value=TRUE)){
 # write updated table
 write_tsv(gcn,"facets/geneCN_fill.txt")
 
-cat(green("done\n"))
+cat(green("\n  [done]\n\n"))
 
