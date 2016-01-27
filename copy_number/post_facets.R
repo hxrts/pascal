@@ -66,7 +66,6 @@ for (samplename in grep("threshold",names(gcn),value=TRUE)){
 				select(chrom,mid,hgnc) %>%
 				rowwise %>%
 				inner_join(gcn %>%
-					filter(chrom==chromosome) %>%
 					mutate(qmid=rowMeans(.[,c("start","end")])) %>% 
 					select(chrom,qmid,get(samplename)),by="chrom") %>%
 				ungroup %>%
