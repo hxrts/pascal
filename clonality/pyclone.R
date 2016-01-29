@@ -155,9 +155,9 @@ for (subnum in 1:nrow(subsets)){
 	# plotting
 	#---------
 	cat(green("\n-") %+% " plotting results:\n  plots/",subname,".loci.pdf",sep="")
-	system(str_c(sysprefix,"PyClone plot_loci --config_file config/",subname,".config.yaml --plot_file plots/",subname,".loci.pdf --plot_type density"))
+	system(str_c(sysprefix,"xvfb-run PyClone plot_loci --config_file config/",subname,".config.yaml --plot_file plots/",subname,".loci.pdf --plot_type density"))
 	cat("\n  plots/",subname,".cluster.pdf\n",sep="")
-	system(str_c(sysprefix,"PyClone plot_clusters --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density"))
+	system(str_c(sysprefix,"xvfb-run PyClone plot_clusters --config_file config/",subname,".config.yaml --plot_file plots/",subname,".cluster.pdf --plot_type density"))
 
 }
 
