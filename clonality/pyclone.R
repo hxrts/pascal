@@ -21,7 +21,23 @@ subsets<-read.delim("subsets.txt",sep=" ",stringsAsFactors=FALSE,header=FALSE)
 rmrow<-grep("#",subsets[,1])
 if(length(rmrow)>0){subsets<-subsets[-rmrow,]}
 
-muts<-read.xlsx("summary/mutation_summary.xlsx",sheet="SNV_HIGH_MODERATE_SUMMARY",check.names=TRUE)
+muts1<-read.xlsx("summary/mutation_summary.xlsx",sheet="SNV_HIGH_MODERATE_SUMMARY",check.names=TRUE)[,1:14]
+muts2<-read.xlsx("summary/mutation_summary.xlsx",sheet="SNV_LOW_MODIFIER_SUMMARY",check.names=TRUE)[,1:14]
+muts3<-read.xlsx("summary/mutation_summary.xlsx",sheet="SNV_SYNONYMOUS_SUMMARY",check.names=TRUE)[,1:14]
+muts4<-read.xlsx("summary/mutation_summary.xlsx",sheet="SNV_NONSYNONYMOUS_SUMMARY",check.names=TRUE)[,1:14]
+muts5<-read.xlsx("summary/mutation_summary.xlsx",sheet="INDEL_HIGH_MODERATE_SUMMARY",check.names=TRUE)[,1:14]
+muts6<-read.xlsx("summary/mutation_summary.xlsx",sheet="INDEL_LOW_MODIFIER_SUMMARY",check.names=TRUE)[,1:14]
+muts7<-read.xlsx("summary/mutation_summary.xlsx",sheet="INDEL_NONSYNONYMOUS_SUMMARY",check.names=TRUE)[,1:14]
+
+muts8<-read.xlsx("summary/mutation_summary.xlsx",sheet="mutect_high_moderate",check.names=TRUE)[,c(1:6,81,88,87,79,164,165,16,15)]
+muts9<-read.xlsx("summary/mutation_summary.xlsx",sheet="mutect_low_modifier",check.names=TRUE)[,c(1:6,81,88,87,79,164,165,16,15)]
+
+muts10<-read.xlsx("summary/mutation_summary.xlsx",sheet="strelka_varscan_high_moderate",check.names=TRUE)[,c(1:6,73,80,79,71,149,150,13,14)]
+muts11<-read.xlsx("summary/mutation_summary.xlsx",sheet="strelka_varscan_low_modifier",check.names=TRUE)[,c(1:6,73,80,79,71,149,150,13,14)]
+muts12<-read.xlsx("summary/mutation_summary.xlsx",sheet="strelka_varscan_nonsynonymous",check.names=TRUE)[,c(1:6,73,80,79,71,149,150,13,14)]
+
+muts<-rbind(muts1,muts2,muts3,muts4,muts5,muts6,muts7,muts8,muts9,muts10) %>% distinct
+
 segfiles<-list.files("facets",pattern="*cncf.txt")
 
 setwd("pyclone")	# for some reason PyClone needs to be run from the root directory
