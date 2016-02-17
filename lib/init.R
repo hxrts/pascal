@@ -18,7 +18,8 @@ samples <-
 		normal <-
 			apply(sets,1, function(row) row %>% list.filter (.!="") %>% tail(1)) %>%
 			rep(apply(sets,1,function(row) row %>% list.filter(.!="") %>% length-1))
-		data.frame(tumor,normal,stringsAsFactors=FALSE) %>% tbl_df
+		data.frame(normal,tumor,stringsAsFactors=FALSE) %>%
+		tbl_df
 	})
 
 # read subsets file
