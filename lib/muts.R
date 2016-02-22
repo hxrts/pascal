@@ -2,7 +2,17 @@
 # base libraries
 #---------------
 
-suppressMessages(pacman::p_load(dplyr,readr,tidyr,magrittr,purrr,stringr,rlist,crayon))
+suppressMessages(pacman::p_load(dplyr,readr,tidyr,magrittr,purrr,stringr,rlist,ggplot2,crayon))
+
+#-----------------
+# path contingency
+#-----------------
+
+wd <- getwd()
+
+if(!"samples.txt" %in% list.files()){
+	setwd("..")
+}
 
 #-------------------
 # load sufam results
@@ -57,4 +67,14 @@ muts<-
 	filter(effect!="silent") %>%
 	arrange(-maf.t)
 
+#---------------
+# print metadata
+#---------------
+
 cat(green("\n-") %+% " muts.txt | muts.vcf | muts.all | muts\n\n") ; muts ; cat("\n")
+
+#--------------------------------
+# move back to original directory
+#--------------------------------
+
+setwd(wd)

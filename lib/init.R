@@ -2,7 +2,17 @@
 # base libraries
 #---------------
 
-suppressMessages(pacman::p_load(dplyr,readr,tidyr,magrittr,purrr,stringr,rlist,crayon))
+suppressMessages(pacman::p_load(dplyr,readr,tidyr,magrittr,purrr,stringr,rlist,ggplot2,crayon))
+
+#-----------------
+# path contingency
+#-----------------
+
+wd <- getwd()
+
+if(!"samples.txt" %in% list.files()){
+	setwd("..")
+}
 
 #------
 # input
@@ -45,10 +55,15 @@ subsets <-
 # filter samples as those in subsets
 samples %<>% filter(tumor %in% unlist(subsets))
 
-
 #---------------
 # print metadata
 #---------------
 
 cat(green("\n-") %+% " samples\n\n") ; print(samples %>% as.data.frame,row.names=FALSE,right=FALSE) ; cat("\n")
 cat(green("\n-") %+% " subsets\n\n") ; print(subsets %>% as.data.frame,row.names=FALSE,right=FALSE)
+
+#--------------------------------
+# move back to original directory
+#--------------------------------
+
+setwd(wd)
