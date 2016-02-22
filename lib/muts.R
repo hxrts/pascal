@@ -42,18 +42,18 @@ muts.all <-
 # pair tumor / normal
 #--------------------
 
-muts<-
+muts.tn <-
 	muts.all %>%
 	filter(sample %in% samples$tumor) %>%
 	rename(tumor=sample,cov.t=cov,maf.t=maf) %>%
 	left_join(samples,by=c("tumor")) %>%
-	left_join(muts %>%
+	left_join(muts.all %>%
 		filter(sample %in% samples$normal) %>%
 		select(-ref) %>%
 		rename(normal=sample,cov.n=cov,maf.n=maf),
 	by=c("normal","gene","chrom","pos","alt","effect")) %>%
 	select(tumor,normal,gene,chrom,pos,ref,alt,cov.t,cov.n,maf.t,maf.n,effect) %>%
-	filter(maf.t>0.01 & cov.t>5 & cov.n>5 & maf.n==0) %>%
+	filter(maf.t>0.005 & cov.t>1 & cov.n>1 & maf.n==0) %>%
 	mutate(effect=
 		ifelse(effect%in%c("STOP_GAINED","Nonsense_Mutation","stop_gained&splice_region_variant","stop_gained"),"truncating snv",
 		ifelse(effect%in%c("FRAME_SHIFT","FRAME_SHIFT","Frame_Shift_Del","Frame_Shift_Ins","frameshift_variant","frameshift_variant&stop_gained","frameshift_variant&splice_region_variant","frameshift_variant&splice_acceptor_variant&splice_region_variant&splice_region_variant&intron_variant"),"frameshift indel",
@@ -71,7 +71,7 @@ muts<-
 # print metadata
 #---------------
 
-cat(green("\n-muts\n\n")) ; muts ; cat("\n")
+cat(green("\n-muts.tn\n\n")) ; muts.tn ; cat("\n")
 
 #--------------------------------
 # move back to original directory
