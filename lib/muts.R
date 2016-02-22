@@ -71,7 +71,7 @@ muts<-
 # print metadata
 #---------------
 
-cat(green("\n-") %+% " muts.txt | muts.vcf | muts.all | muts\n\n") ; muts ; cat("\n")
+cat(green("\n-muts\n\n")) ; muts ; cat("\n")
 
 #--------------------------------
 # move back to original directory
