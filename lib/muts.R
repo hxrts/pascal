@@ -8,17 +8,20 @@ suppressMessages(pacman::p_load(dplyr,readr,tidyr,magrittr,purrr,stringr,rlist,c
 # load sufam results
 #-------------------
 
-muts.txt <- read_tsv("recurrent_mutations/sufam/all_sufam.txt") %>%
+muts.txt <-
+	read_tsv("recurrent_mutations/sufam/all_sufam.txt") %>%
 	select(sample,chrom,pos,ref=val_ref,alt=val_alt,cov,maf=val_maf)
 
-muts.vcf <- read_tsv("recurrent_mutations/sufam/all_mutations.vcf") %>%
+muts.vcf <-
+	read_tsv("recurrent_mutations/sufam/all_mutations.vcf") %>%
 	select(chrom=`#CHROM`,pos=POS,gene=`ANN[*].GENE`,alt=ALT,effect=`ANN[*].EFFECT`)
 
 #---------------
 # join vcf & txt
 #---------------
 
-muts.all <- muts.vcf %>% full_join(muts.txt, by=c("chrom","pos","alt")) %>%
+muts.all <-
+	muts.vcf %>% full_join(muts.txt, by=c("chrom","pos","alt")) %>%
 	rowwise() %>%
 	mutate(gene=str_split(gene,"\\|") %>% unlist %>% head(1)) %>%
 	mutate(effect=str_split(effect,"\\|") %>% unlist %>% head(1)) %>%
