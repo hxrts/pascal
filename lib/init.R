@@ -50,5 +50,5 @@ samples %<>% filter(tumor %in% unlist(subsets))
 # print metadata
 #---------------
 
-cat(green("\n-") %+% " samples\n\n") ; print(samples %>% as.data.frame,row.names=FALSE,right=FALSE)
-cat(green("\n-") %+% " subsets\n\n") ; print(subsets %>% as.data.frame,row.names=FALSE,right=FALSE) ; cat("\n")
+cat(green("\n-") %+% " samples\n\n") ; print(samples %>% as.data.frame,row.names=FALSE,right=FALSE) ; cat("\n")
+cat(green("\n-") %+% " subsets\n\n") ; print(subsets %>% as.data.frame,row.names=FALSE,right=FALSE)
