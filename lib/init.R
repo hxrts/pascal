@@ -40,14 +40,11 @@ subsets <-
 		group_by(subset) %>%
 		filter(!grepl("#",subset)) %>%
 		summarise_each(funs(ifelse(.=="","NA",.))) %>%
-		t %>%
-		as.data.frame(stringsAsFactors=FALSE) %>%
-		setNames(.[1,]) %>%
-		slice(-1) %>%
-		tbl_df
+		split(.$subset) %>%
+		map(~ .x %>% unlist %>% list.filter(.!="NA") %>% unname)
 	} else {	# add all samples as subset if no subsets file exists
 		samples$tumor %>%
-		as.data.frame %>%
+		list %>%
 		setNames(getwd() %>% strsplit("/") %>% unlist %>% tail(1))
 	}
 
@@ -60,7 +57,7 @@ samples %<>% filter(tumor %in% unlist(subsets))
 #---------------
 
 cat(green("\n-samples\n\n")) ; print(samples %>% as.data.frame,row.names=FALSE,right=FALSE)
-cat(green("\n-subsets\n\n")) ; print(subsets %>% as.data.frame,row.names=FALSE,right=FALSE) ; cat("\n")
+cat(green("\n-subsets\n\n")) ; print(subsets) ; cat("\n")
 
 #--------------------------------
 # move back to original directory

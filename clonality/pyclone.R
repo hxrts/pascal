@@ -4,16 +4,20 @@
 # initialization
 #---------------
 
-suppressMessages(pacman::p_load(yaml,dplyr,readr,tidyr,magrittr,purrr,stringr,rlist,crayon))
+source('pascal/lib/init.R')
+source('pascal/lib/muts.R')
+
+# additional packages
+suppressMessages(pacman::p_load(yaml))
 
 sysprefix="umask 002 && unset PYTHONPATH && source /home/bermans/miniconda2/envs/pyclone/bin/activate /home/bermans/miniconda2/envs/pyclone >/dev/null 2>&1 && "
 
 # create necessary directories
 system("mkdir pyclone pyclone/config pyclone/events pyclone/priors pyclone/tables pyclone/plots &>/dev/null")
 
-#------
-# input
-#------
+#-----------
+# processing
+#-----------
 
 cat(green("\n-") %+% " reading input\n")
 

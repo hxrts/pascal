@@ -19,12 +19,14 @@ if(!"samples.txt" %in% list.files()){
 #-------------------
 
 muts.txt <-
-	read_tsv("recurrent_mutations/sufam/all_sufam.txt") %>%
+	read.delim("recurrent_mutations/sufam/all_sufam.txt",sep="\t",stringsAsFactors=FALSE) %>%
+	tbl_df %>%
 	select(sample,chrom,pos,ref=val_ref,alt=val_alt,cov,maf=val_maf)
 
 muts.vcf <-
-	read_tsv("recurrent_mutations/sufam/all_mutations.vcf") %>%
-	select(chrom=`#CHROM`,pos=POS,gene=`ANN[*].GENE`,alt=ALT,effect=`ANN[*].EFFECT`)
+	read.delim("recurrent_mutations/sufam/all_mutations.vcf",sep="\t",stringsAsFactors=FALSE) %>%
+	tbl_df %>%
+	select(chrom=`X.CHROM`,pos=POS,gene=`ANN....GENE`,alt=ALT,effect=`ANN....EFFECT`)
 
 #---------------
 # join vcf & txt
@@ -53,7 +55,6 @@ muts.tn <-
 		rename(normal=sample,cov.n=cov,maf.n=maf),
 	by=c("normal","gene","chrom","pos","alt","effect")) %>%
 	select(tumor,normal,gene,chrom,pos,ref,alt,cov.t,cov.n,maf.t,maf.n,effect) %>%
-	filter(maf.t>0.005 & cov.t>1 & cov.n>1 & maf.n==0) %>%
 	mutate(effect=
 		ifelse(effect%in%c("STOP_GAINED","Nonsense_Mutation","stop_gained&splice_region_variant","stop_gained"),"truncating snv",
 		ifelse(effect%in%c("FRAME_SHIFT","FRAME_SHIFT","Frame_Shift_Del","Frame_Shift_Ins","frameshift_variant","frameshift_variant&stop_gained","frameshift_variant&splice_region_variant","frameshift_variant&splice_acceptor_variant&splice_region_variant&splice_region_variant&intron_variant"),"frameshift indel",
@@ -63,15 +64,50 @@ muts.tn <-
 		ifelse(effect%in%c("STOP_LOST","START_LOST","START_GAINED","UTR_5_PRIME","start_lost","stop_lost"),"start/stop codon change",
 		#ifelse(effect%in%c("Amplification","Homozygous Deletion"),X #"CNA",
 		ifelse(effect%in%c("synonymous_variant","splice_region_variant&synonymous_variant","non_coding_exon_variant","upstream_gene_variant","downstream_gene_variant","intron_variant","frameshift_variant&splice_donor_variant&splice_region_variant&splice_region_variant&intron_variant","non_coding_exon_variant|synonymous_variant","SYNONYMOUS_CODING","synonymous_variant|synonymous_variant","splice_region_variant&synonymous_variant|splice_region_variant&non_coding_exon_variant","intragenic_variant"),"silent", # synonymous/noncoding/up/downstream/intragenic
-		NA)))))))) %>%
+		NA))))))))
+
+muts.tn.filter <-
+	muts.tn %>%
 	filter(effect!="silent") %>%
-	arrange(-maf.t)
+	filter(maf.t>0.005 & cov.t>1 & cov.n>1 & maf.n==0) %>%
+	arrange(-maf.t) 
+
+muts.matched <-
+	subsets %>%
+	map(~
+		muts.tn %>%
+		filter(tumor %in% .x) %>%
+		select(tumor,gene,chrom,pos,alt,maf.n) %>%
+		spread(tumor,maf.n) %>%
+		mutate(row.sum=select(.,matches(subsets %>% paste(collapse="|"))) %>% rowSums) %>%
+		filter(row.sum==0) %>%
+		select(-row.sum) %>%
+		gather(tumor,maf.n,-c(gene,chrom,pos,alt)) %>%
+		left_join(muts.tn,by=c("gene","chrom","pos","alt","tumor","maf.n")) %>%
+		arrange(chrom,pos,gene,alt,tumor)
+	) %>%
+	setNames(subsets %>% colnames)
+
+muts.matched.filter <-
+	muts.matched %>%
+	map(~ .x %>%
+		filter(effect!="silent") %>%
+		filter(maf.t>0.005 & cov.t>1 & cov.n>1 & maf.n==0) %>%
+		arrange(-maf.t)
+	)
 
 #---------------
 # print metadata
 #---------------
 
-cat(green("\n-muts.tn\n\n")) ; muts.tn ; cat("\n")
+cat(green("\n-muts.txt\n")) ; 				muts.txt %>% print(n=0)
+cat(green("\n-muts.vcf\n")) ; 				muts.vcf %>% print(n=0)
+cat(green("\n-muts.all\n")) ; 				muts.all %>% print(n=0)
+cat(green("\n-muts.tn\n")) ; 				muts.tn %>% print(n=0)
+cat(green("\n-muts.tn.filter\n")) ; 		muts.tn.filter %>% print(n=0)
+cat(green("\n-muts.matched\n")) ; 			muts.matched %>% map(~ .x %>% print(n=0))
+cat(green("\n-muts.matched.filter\n")) ;	muts.matched.filter %>% map(~ .x %>% print(n=0))
+
 
 #--------------------------------
 # move back to original directory
