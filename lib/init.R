@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 #---------------
 # base libraries
 #---------------
@@ -12,6 +14,12 @@ wd <- getwd()
 
 if(!"samples.txt" %in% list.files()){
 	setwd("..")
+	if(!"samples.txt" %in% list.files()){
+		setwd("..")
+		if(!"samples.txt" %in% list.files()){
+			setwd("..")
+		}
+	}
 }
 
 #------
