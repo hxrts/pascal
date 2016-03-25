@@ -7,145 +7,142 @@ system("mkdir functional_networks &>/dev/null")
 # init
 #-----
 
-# run-specific libraries
-library(plyr)
 #suppressMessages(pacman::p_load(GO.db))
 
 # read metadata files & load base packages
 source("pascal/lib/init.R")
-
-# mutation plotting function
-PlotVariants <- function(muts,filename){
-	palette  <- c(`truncating snv`="#00A5A8",`frameshift indel`="#008AE9",`missense snv`="#C84DDD",`inframe indel`="#E44988",`splice site variant`="#C17200",`start/stop codon change`="#749000") #,`silent`="#00A24B")
-	geometry <- c(`truncating snv`=20,`frameshift indel`=2,`missense snv`=3,`inframe indel`=4,`splice site variant`=5,`start/stop codon change`=6) #,`silent`=1)
-	pdf(filename,12,16)
-	print(
-	ggplot(muts,aes(sample,gene)) +
-	geom_tile(aes(fill=ifelse(is.na(variant),variant,NA)),colour="black") +
-
-	geom_tile(data=muts %>% filter(variant%in%c("truncating snv","frameshift indel","splice site variant","stop codon change")),aes(fill=variant),colour="black") +
-	scale_fill_manual(values=palette,na.value="gray90") +
-
-	geom_point(data=muts %>% filter(variant%in%c("missense snv","inframe indel","silent")),aes(shape=variant),color="black") +
-	scale_shape_manual(values=geometry,na.value=NA) +
-
-	theme(
-		panel.border=element_blank(),
-		axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
-		axis.text=element_text(size=10),
-		legend.title=element_blank())
-	)
-	dev.off()
-}
-
-#-------------------
-# load sufam results
-#-------------------
-
-muts.txt <- read_tsv("recurrent_mutations/sufam/all_sufam.txt") %>%
-	select(sample,chrom,pos,ref=val_ref,alt=val_alt,cov,maf=val_maf)
-
-muts.vcf <- read_tsv("recurrent_mutations/sufam/all_mutations.vcf") %>%
-	select(chrom=`#CHROM`,pos=POS,gene=`ANN[*].GENE`,alt=ALT,effect=`ANN[*].EFFECT`)
-
-#---------------
-# join vcf & txt
-#---------------
-
-muts.all <- muts.vcf %>% full_join(muts.txt, by=c("chrom","pos","alt")) %>%
-	rowwise() %>%
-	mutate(gene=str_split(gene,"\\|") %>% unlist %>% head(1)) %>%
-	mutate(effect=str_split(effect,"\\|") %>% unlist %>% head(1)) %>%
-	ungroup() %>%
-	select(sample,gene,chrom,pos,ref,alt,effect,cov,maf)
-
-#--------------------
-# pair tumor / normal
-#--------------------
-
-muts<-
-	muts.all %>%
-	filter(sample %in% samples$tumor) %>%
-	rename(tumor=sample,cov.t=cov,maf.t=maf) %>%
-	left_join(samples,by=c("tumor")) %>%
-	left_join(muts %>%
-		filter(sample %in% samples$normal) %>%
-		select(-ref) %>%
-		rename(normal=sample,cov.n=cov,maf.n=maf),
-	by=c("normal","gene","chrom","pos","alt","effect")) %>%
-	select(tumor,normal,gene,chrom,pos,ref,alt,cov.t,cov.n,maf.t,maf.n,effect) %>%
-	filter(maf.t>0.01 & cov.t>5 & cov.n>5 & maf.n==0) %>%
-	mutate(effect=
-		ifelse(effect%in%c("STOP_GAINED","Nonsense_Mutation","stop_gained&splice_region_variant","stop_gained"),"truncating snv",
-		ifelse(effect%in%c("FRAME_SHIFT","FRAME_SHIFT","Frame_Shift_Del","Frame_Shift_Ins","frameshift_variant","frameshift_variant&stop_gained","frameshift_variant&splice_region_variant","frameshift_variant&splice_acceptor_variant&splice_region_variant&splice_region_variant&intron_variant"),"frameshift indel",
-		ifelse(effect%in%c("NON_SYNONYMOUS_CODING","STOP_LOST","Missense_Mutation","missense_variant","missense_variant&splice_region_variant","missense_variant|missense_variant"),"missense snv",
-		ifelse(effect%in%c("CODON_CHANGE_PLUS_CODON_DELETION","CODON_DELETION","CODON_INSERTION","In_Frame_Ins","In_Frame_Del","disruptive_inframe_deletion","disruptive_inframe_insertion","inframe_deletion","inframe_insertion","disruptive_inframe_deletion&splice_region_variant","inframe_deletion&splice_region_variant"),"inframe indel",
-		ifelse(effect%in%c("SPLICE_SITE_DONOR","SPLICE_SITE_ACCEPTOR","SPLICE_SITE_REGION","Splice_Site","splice_donor_variant&intron_variant","splice_acceptor_variant&intron_variant","splicing","splice_donor_variant&splice_region_variant&intron_variant","splice_donor_variant&disruptive_inframe_deletion&splice_region_variant&splice_region_variant&intron_variant"),"splice site variant",
-		ifelse(effect%in%c("STOP_LOST","START_LOST","START_GAINED","UTR_5_PRIME","start_lost","stop_lost"),"start/stop codon change",
-		#ifelse(effect%in%c("Amplification","Homozygous Deletion"),X #"CNA",
-		ifelse(effect%in%c("synonymous_variant","splice_region_variant&synonymous_variant","non_coding_exon_variant","upstream_gene_variant","downstream_gene_variant","intron_variant","frameshift_variant&splice_donor_variant&splice_region_variant&splice_region_variant&intron_variant","non_coding_exon_variant|synonymous_variant","SYNONYMOUS_CODING","synonymous_variant|synonymous_variant","splice_region_variant&synonymous_variant|splice_region_variant&non_coding_exon_variant","intragenic_variant"),"silent", # synonymous/noncoding/up/downstream/intragenic
-		NA)))))))) %>%
-	filter(effect!="silent") %>%
-	arrange(-maf.t)
-
-# muts %>% 
-# select(tumor,gene,effect) %>%
-# arrange(tumor) %>%
-# spread(tumor,effect,fill=NA) %>%
-# select(gene,samples$tumor %>% sort %>% .[c(1,length(.))] ) %>%
-# distinct
-
-# # melt MSK mutations & plot
-# msk.list <- msk.muts %>%
-# 	gather(sample,variant,ACC10A:MP3MET) %>%
-# 	arrange(sample,gene,variant)
-
-# # plot MSK mutations
-# PlotVariants(msk.list,"msk.muts.suf.pdf")
+source("pascal/lib/muts.R")
 
 
+# http://software.broadinstitute.org/gsea/msigdb/collections.jsp [retreived 3.1.16]
+# db.names <- as.list(c(
+# 					hallmark    = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/gmt/h.all.v5.1.symbols.gmt",		# hallmark
+# 					curated     = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/gmt/c2.all.v5.1.symbols.gmt",		# curated
+# 					mined       = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/gmt/c4.all.v5.1.symbols.gmt",		# computationally defined via cancer gene micro array
+# 					ontologic   = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/gmt/c5.all.v5.1.symbols.gmt",		# ontollogically grouped (not necessarily coexpressed)
+# 					oncogenic	= "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/gmt/c6.all.v5.1.symbols.gmt",		# oncogenic signatures
+# 					immunologic = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/gmt/c7.all.v5.1.symbols.gmt"		# immunologic signatures
+# 				))
+
+# # read databases from file
+# dbs <-
+# 	db.names %>%
+# 	map(~ {
+# 			db <- read_tsv(.x,col_names=FALSE)
+# 			db
+# 		})
+
+# db.tsv.names <- as.list(c(
+# 					hallmark    = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/tsv/MSigDB.h-all.v5.1.tsv",		# hallmark
+# 					curated     = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/tsv/MSigDB.c2-all.v5.1.tsv",		# curated
+# 					mined       = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/tsv/MSigDB.c4-all.v5.1.tsv",		# computationally defined via cancer gene micro array
+# 					ontologic   = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/tsv/MSigDB.c5-all.v5.1.tsv",		# ontollogically grouped (not necessarily coexpressed)
+# 					oncogenic	= "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/tsv/MSigDB.c6-all.v5.1.tsv",		# oncogenic signatures
+# 					immunologic = "/ifs/e63data/reis-filho/reference/MSigDB/v5.1/tsv/MSigDB.c7-all.v5.1.tsv"		# immunologic signatures
+# 				))
+
+# # read databases from file
+# dbs <-
+# 	db.tsv.names %>%
+# 	map( ~ {
+# 			read_tsv(.x) %>%
+# 			gather(gene,exists,-paths) %>%
+# 			filter(exists==TRUE) %>%
+# 			arrange(gene) %>%
+# 			select(-exists)
+# 		})
+
+# # save database binary
+# save(data=dbs,file="/ifs/e63data/reis-filho/reference/MSigDB/v5.1/dbs.RData")
+
+n.genes <- muts.matched.filter[[1]] %>% select(gene,chrom,pos,alt,effect) %>% distinct %>% nrow
+list.name <-"small_cell"
+
+# load database binary
+load("/ifs/e63data/reis-filho/reference/MSigDB/v5.1/dbs.RData",verbose=TRUE)
+
+meta.db <-
+	dbs %>%
+	bind_rows(.id="db") %>%
+	mutate(total.n=n()) %>%
+	group_by(paths) %>%
+	mutate(base.n=n()) %>%
+	ungroup %>%
+	inner_join(muts.matched.filter[[1]] %>% select(gene,tumor,chrom,pos,alt,effect)) %>%
+	distinct %>%
+	group_by(paths) %>%
+	mutate(match.n = gene %>% unique %>% length) %>%
+	mutate(p.hyper = phyper(match.n, base.n, total.n-base.n, n.genes, lower.tail=FALSE)) %>%
+	ungroup %>%
+	arrange(p.hyper)
+
+directed.map <-
+	meta.db %>%
+	select(paths,gene) %>%
+	distinct %>%
+	group_by(paths) %>%
+	filter(n()>1) %>%
+	ungroup %>%
+	split(.$paths) %>%
+	map(~ expand.grid(source=.x$gene,target=.x$gene,stringsAsFactors=FALSE)) %>%
+	bind_rows(.id="pathway") %>%
+	select(source,target) %>%
+	mutate(value=as.integer(1))
+
+graph.nodes <-
+	meta.db %>% select(name=gene,group=paths,size=1) %>% distinct
 
 
-GetPathway <- function(db.name,genes,list.name) {
+bar <- renderForceNetwork({
+forceNetwork(Links = directed.map, Nodes = graph.nodes,
+            Source = "source", Target = "target",
+            Value = "value", NodeID = "name",
+            Group = "group", opacity = input$opacity)
+})
 
-	db <-  suppressWarnings(read_tsv(db.name,col_names=FALSE))
-	db.id <- db.name %>% strsplit("/") %>% unlist %>% tail(1) %>% substr(1,nchar(.)-4)
-	matches <- db %>% apply(1, . %>% list.filter(. %in% genes) %>% unname)
-	file <- str_c("functional_networks/",list.name,"_pathways.tsv")
-	
-	cat(list.name %+% " -- " %+% db.id %+% "\n")
 
-	sink(file,append=TRUE)
-		cat("\n# " %+% db.id %+% "\n")
-	sink()
+foo <- forceNetwork(Links = MisLinks, Nodes = MisNodes, Source = "source",
+              Target = "target", Value = "value", NodeID = "name",
+              Group = "group", opacity = 0.4,
+              colourScale = "d3.scale.category20b()")
 
-	if(matches %>% length > 0){
-		path <-
-			matches %>%
-			setNames(db$X1) %>%
-			list.filter(length(.)>0) %>%
-			list.sort(-length(.))
 
-		path.table <- ldply(path,rbind) %>% filter(!is.na(`2`))
+simpleNetwork(networkData) %>%
+saveNetwork(file = 'Net1.html')
 
-		write.table(path.table,file,quote=FALSE,row.names=FALSE,na="",col.names=FALSE,sep="\t",append=TRUE)
 
-	}else{
+meta.db %>% mutate(group.index=group_indices_(.,.dots="paths")) %>% glimpse
 
-		sink(file,append=TRUE)
-			cat("NO MATCHES\n")
-		sink()
-	}
 
-}
+# gene-to-gene visualization
+# http://cpdb.molgen.mpg.de/
 
-impact <- read_tsv("/home/limr/share/cbioportal/data-repos/msk-impact/msk-impact")
-db.names <- list.files("/ifs/e63data/reis-filho/reference/MSigDB/v5.1/gmt",full.names=TRUE,pattern=".gmt")
+# pathway analysis post
+# http://www.gettinggeneticsdone.com/2012/03/pathway-analysis-for-high-throughput.html
 
-genes <- muts$gene %>% unique %>% sort
-list.name="small_cell"
-lapply(db.names,function(db.name) GetPathway(db.name,genes,list.name))
+# gene set enrichment
+# http://software.broadinstitute.org/gsea/index.jsp
 
+# Database for Annotation, Visualization and Integrated Discovery
+# https://david.ncifcrf.gov/
+
+# Reactome Pathway browser
+# http://www.reactome.org/
+
+
+#---------------------------------------------------
+
+
+# IMPACT genes
+
+impact.clinical <- read.delim("/home/limr/share/cbioportal/data-repos/msk-impact/msk-impact/data_clinical.txt",stringsAsFactors=FALSE,sep="\t",skip=5) %>%
+tbl_df
+
+impact.muts <- read.delim("/home/limr/share/cbioportal/data-repos/msk-impact/msk-impact/data_mutations_extended.txt",stringsAsFactors=FALSE,sep="\t",skip=5) %>%
+tbl_df
+
+impact.cna <- read.delim("/home/limr/share/cbioportal/data-repos/msk-impact/msk-impact/data_CNA.txt",stringsAsFactors=FALSE,sep="\t",skip=5) %>%
+tbl_df
 
 
 #genes.table <- read_tsv("/ifs/e63data/reis-filho/data/myoep/cell_lines_rnaseq/recurrent_pathways/Differentially_Expressed_Genes_AME_cell_lines.tsv")[,1:14]
@@ -158,6 +155,66 @@ lapply(db.names,function(db.name) GetPathway(db.name,genes,list.name))
 # 	lapply(db.names,function(db.name) GetPathway(db.name,genes,list.name))
 
 # })
+
+
+#---------------------------------------------------
+
+library(paxtoolsr)
+
+pc.id.map <-
+	muts.all$gene %>%
+	unique %>%
+	sort %>%
+	data.frame(gene=.,stringsAsFactors=FALSE) %>%
+	rowwise %>%
+	mutate(pc.id=idMapping(gene,verbose=TRUE) %>% ifelse(is.null(.),"",.) %>% unlist)
+
+pc.id.map %>%
+	filter(pc.id!="")
+
+muts %>%
+left_join(pc.id.map,by="gene") %>%
+
+
+pc.id.map$pc.id %>%
+lapply(. %>%
+	traverse(path = "ProteinReference/entityFeature:ModificationFeature") %>%
+	xpathSApply("//value/text()", xmlValue)
+	)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
