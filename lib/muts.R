@@ -22,6 +22,14 @@ if(!"samples.txt" %in% list.files()){
 	}
 }
 
+#-----------------
+# load raw results
+#-----------------
+
+muts.raw <- read.delim("summary/tsv/mutation_summary.tsv",sep="\t",stringsAsFactors=FALSE) %>%
+	tbl_df %>%
+	select(tumor=`TUMOR_SAMPLE`,normal=`NORMAL_SAMPLE`,chrom=`CHROM`,pos=`POS`,ref=`REF`,alt=`ALT`,gene=`ANN....GENE`,effect=`ANN....EFFECT`,tumor.maf=`TUMOR_MAF`,normal.maf=`NORMAL_MAF`,tumor.dp=`TUMOR.DP`,normal.dp=`NORMAL.DP`)
+
 #-------------------
 # load sufam results
 #-------------------
@@ -94,7 +102,7 @@ muts.matched <-
 		left_join(muts.tn,by=c("gene","chrom","pos","alt","tumor","maf.n")) %>%
 		arrange(chrom,pos,gene,alt,tumor)
 	) %>%
-	setNames(subsets %>% colnames)
+	setNames(subsets %>% names)
 
 muts.matched.filter <-
 	muts.matched %>%
