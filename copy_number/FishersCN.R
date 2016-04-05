@@ -1,18 +1,31 @@
 #!/usr/bin/env Rscript
 
-GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.title.b, allosome='none', targets.file=NULL, suffix='') {
+GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.title.b, allosome='none', targets.file=NULL, suffix='', threshold.a=TRUE, threshold.b=FALSE, gene.names=TRUE) {
 
-# gene.cn: data frame with the following columns [group, gene, chrom, sample.names... ] - only sample names containing the string '_threshold' are run
+#------
+# USAGE
+#------
+
+# gene.cn: data frame with the following columns [group, gene, chrom, sample.names... ] - only sample names containing the string "_threshold" are run
 #
-# title: string used for plot title [ verbatim ] and file name [ 'a vs b' -> 'a_vs_b.pdf' ]
+# gene.cn.a / gene.cn.b: data frames with columns gene, start, end, sample1, sample2 ... [ sample columns should have copy number calls -2..2 ]
+#
+# plot.title.main: string used for plot title [ verbatim ], and file name [ "a vs b" -> "a_vs_b.pdf" ]
+#
+# plot.title.a / plot.title.b used for subtitle naming
 #
 # allosome:
-#	
-#	'none'		= don't plot X or Y chromosome
-#	'merge'		= treat X & Y coordinates as homologous pair
-#	'distinct'	= treat X & Y as seperate, sequential chromosomes
 #
-# suffix: string appended to end of file names for versioning, use reserved string 'now' to use current timestamp
+#	"none"		= exclude X & Y chromosome
+#	"merge"		= treat X & Y coordinates as homologous pair
+#	"distinct"	= treat X & Y as seperate, sequential chromosomes
+#
+# targets.file: should genes be subset by a targets bed file [first 3 cols should be chrom, start, end]
+#
+# suffix: string appended to end of file names for versioning, use reserved string "now" to use current timestamp
+#
+# threshold.a / threshold.b: subset columns with those containing string 'threshold'
+
 
 	#---------------
 	# INITIALIZATION
@@ -30,7 +43,7 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 	#----------
 
 	# create gains prevalence object
-	GainPrevalence <- function(sample.stats, plot.title) {
+	GainPrevalence <- function(sample.stats, plot.title, gene.names) {
 
 		stats.melt <-
 			sample.stats %>%
@@ -51,24 +64,50 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 		scale_fill_brewer(type='qualitative', palette='Accent') +
 
 		geom_hline(aes(yintercept=0), colour='#666666') +	# y=0 axis
-		geom_vline(xintercept=head(chrom.n$chrom.n,-1)+0.5, colour='#666666', linetype=3) +	# chromosome demarcation
-		annotate(geom="text", x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=Inf, vjust=1.5, size=5) +	# chromosome enumeration
+		geom_vline(xintercept=head(chrom.n$chrom.n,-1)+0.5, colour='#666666', linetype=3)	# chromosome demarcation
 
-		theme(	legend.title 		= element_blank(),
-				panel.grid.major 	= element_blank(),
-				panel.grid.minor    = element_blank(),
-				text 				= element_text(size=14),
-				axis.title.x		= element_text(vjust=7),
-				axis.title.y		= element_text(vjust=1),
-				axis.text.x  		= element_text(angle=90,vjust=0.5,hjust=1,size=5),
-				axis.text.y    		= element_text(size=10),
-				legend.key   		= element_rect(colour="white",fill=NULL,size=0.1),
-				legend.key.size 	= unit(1.4, "lines"),
-				legend.text			= element_text(size=10),
-				strip.text.x 		= element_text(colour="white",size=10),
-				panel.background 	= element_rect(fill = NA, color = "black"),
-				plot.margin			= unit(c(1,1,1,1),"cm"))
-		gg
+		if(gene.names==TRUE) {
+
+			gg <- gg + annotate(geom='text', x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=Inf, vjust=2, size=5) +	# chromosome enumeration (top)
+				theme(	legend.title 		= element_blank(),
+						panel.grid.major 	= element_blank(),
+						panel.grid.minor    = element_blank(),
+						text 				= element_text(size=14),
+						axis.title.x		= element_text(vjust=7),
+						axis.text.x  		= element_text(angle=90,vjust=0.5,hjust=1,size=5),
+						axis.text.y    		= element_text(size=10),
+						legend.key   		= element_rect(colour='white', fill=NULL, size=0.1),
+						legend.key.size 	= unit(1.4, 'lines'),
+						legend.text			= element_text(size=10),
+						strip.text.x 		= element_text(colour='white',size=10),
+						panel.background 	= element_rect(fill=NA, color='black'),
+						plot.margin			= unit(c(1,1,1,1),'cm'))
+
+		} else {
+
+			gg <- gg + annotate(geom='text', x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=-Inf, vjust=2, size=5) +	# chromosome enumeration (bottom)
+			theme(	legend.title 		= element_blank(),
+					panel.grid.major 	= element_blank(),
+					panel.grid.minor    = element_blank(),
+					text 				= element_text(size=14),
+					axis.title.x 		= element_blank(),
+					axis.text.x 		= element_blank(),
+					axis.ticks.x 		= element_blank(),
+					axis.title.y		= element_text(vjust=4),
+					axis.text.y    		= element_text(size=10),
+					legend.key   		= element_rect(colour='white',fill=NULL,size=0.1),
+					legend.key.size 	= unit(1.4, 'lines'),
+					legend.text			= element_text(size=10),
+					strip.text.x 		= element_text(colour='white',size=10),
+					panel.background 	= element_rect(fill=NA, color='black'),
+					plot.margin			= unit(c(1,1,1,1),'cm'))
+
+		}
+
+		gt <- ggplot_gtable(ggplot_build(gg))
+		gt$layout$clip[gt$layout$name=='panel'] <- 'off'
+		gt
+
 	}
 
 	# create amplifications prevalence object
@@ -90,24 +129,49 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 		scale_fill_brewer(type='qualitative', palette='Accent') +
 
 		geom_hline(aes(yintercept=0), colour='#666666') +	# y=0 axis
-		geom_vline(xintercept=head(chrom.n$chrom.n,-1)+0.5, colour='#666666', linetype=3) +	# chromosome demarcation
-		annotate(geo ="text", x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=Inf, vjust=1.5, size=5) +	# chromosome enumeration
+		geom_vline(xintercept=head(chrom.n$chrom.n,-1)+0.5, colour='#666666', linetype=3)	# chromosome demarcation
 
-		theme(	legend.title 		= element_blank(),
-				panel.grid.major 	= element_blank(),
-				panel.grid.minor    = element_blank(),
-				text 				= element_text(size=14),
-				axis.title.x		= element_text(vjust=7),
-				axis.title.y		= element_text(vjust=1),
-				axis.text.x  		= element_text(angle=90,vjust=0.5,hjust=1,size=5),
-				axis.text.y			= element_text(size=10),
-				legend.key   		= element_rect(colour="white",fill=NULL,size=0.1),
-				legend.key.size 	= unit(1.4, "lines"),
-				legend.text			= element_text(size=10),
-				strip.text.x 		= element_text(colour="white",size=10),
-				panel.background 	= element_rect(fill = NA, color = "black"),
-				plot.margin			= unit(c(1,1,1,1),"cm"))
-		gg
+		if(gene.names==TRUE) {
+
+			gg <- gg + annotate(geom='text', x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=Inf, vjust=2, size=5) +	# chromosome enumeration (top)
+				theme(	legend.title 		= element_blank(),
+						panel.grid.major 	= element_blank(),
+						panel.grid.minor    = element_blank(),
+						text 				= element_text(size=14),
+						axis.title.x		= element_text(vjust=7),
+						axis.text.x  		= element_text(angle=90,vjust=0.5,hjust=1,size=5),
+						axis.text.y    		= element_text(size=10),
+						legend.key   		= element_rect(colour='white', fill=NULL, size=0.1),
+						legend.key.size 	= unit(1.4, 'lines'),
+						legend.text			= element_text(size=10),
+						strip.text.x 		= element_text(colour='white',size=10),
+						panel.background 	= element_rect(fill=NA, color='black'),
+						plot.margin			= unit(c(1,1,1,1),'cm'))
+
+		} else {
+
+			gg <- gg + annotate(geom='text', x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=-Inf, vjust=2, size=5) +	# chromosome enumeration (bottom)
+				theme(	legend.title 		= element_blank(),
+						panel.grid.major 	= element_blank(),
+						panel.grid.minor    = element_blank(),
+						text 				= element_text(size=14),
+						axis.title.x 		= element_blank(),
+						axis.text.x 		= element_blank(),
+						axis.ticks.x 		= element_blank(),
+						axis.title.y		= element_text(vjust=4),
+						axis.text.y    		= element_text(size=10),
+						legend.key   		= element_rect(colour='white',fill=NULL,size=0.1),
+						legend.key.size 	= unit(1.4, 'lines'),
+						legend.text			= element_text(size=10),
+						strip.text.x 		= element_text(colour='white',size=10),
+						panel.background 	= element_rect(fill=NA, color='black'),
+						plot.margin			= unit(c(1,1,1,1),'cm'))
+
+		}
+
+		gt <- ggplot_gtable(ggplot_build(gg))
+		gt$layout$clip[gt$layout$name=='panel'] <- 'off'
+		gt
 	}
 
 	# create gains fishers object
@@ -132,24 +196,49 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 		scale_fill_brewer(type='qualitative', palette='Accent') +
 
 		geom_hline(aes(yintercept=0), colour='#666666') +	# y=0 axis
-		geom_vline(xintercept=head(chrom.n$chrom.n,-1)+0.5, colour='#666666', linetype=3) +	# chromosome demarcation
-		annotate(geom="text", x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=Inf, vjust=1.5, size=5) +	# chromosome enumeration
+		geom_vline(xintercept=head(chrom.n$chrom.n,-1)+0.5, colour='#666666', linetype=3)	# chromosome demarcation
 
-		theme(	legend.title 		= element_blank(),
-				panel.grid.major 	= element_blank(),
-				panel.grid.minor    = element_blank(),
-				text 				= element_text(size=14),
-				axis.title.x		= element_text(vjust=7),
-				axis.title.y		= element_text(vjust=1),
-				axis.text.x  		= element_text(angle=90,vjust=0.5,hjust=1,size=5),
-				axis.text.y    		= element_text(size=10),
-				legend.key   		= element_rect(colour="white",fill=NULL,size=0.1),
-				legend.key.size 	= unit(1.4, "lines"),
-				legend.text			= element_text(size=10),
-				strip.text.x 		= element_text(colour="white",size=10),
-				panel.background 	= element_rect(fill = NA, color = "black"),
-				plot.margin			= unit(c(1,1,1,1),"cm"))
-		gg
+		if(gene.names==TRUE) {
+
+			gg <- gg + annotate(geom='text', x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=Inf, vjust=2, size=5) +	# chromosome enumeration (top)
+				theme(	legend.title 		= element_blank(),
+						panel.grid.major 	= element_blank(),
+						panel.grid.minor    = element_blank(),
+						text 				= element_text(size=14),
+						axis.title.x		= element_text(vjust=7),
+						axis.text.x  		= element_text(angle=90,vjust=0.5,hjust=1,size=5),
+						axis.text.y    		= element_text(size=10),
+						legend.key   		= element_rect(colour='white', fill=NULL, size=0.1),
+						legend.key.size 	= unit(1.4, 'lines'),
+						legend.text			= element_text(size=10),
+						strip.text.x 		= element_text(colour='white',size=10),
+						panel.background 	= element_rect(fill=NA, color='black'),
+						plot.margin			= unit(c(1,1,1,1),'cm'))
+
+		} else {
+
+			gg <- gg + annotate(geom='text', x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=-Inf, vjust=2, size=5) +	# chromosome enumeration (bottom)
+			theme(	legend.title 		= element_blank(),
+					panel.grid.major 	= element_blank(),
+					panel.grid.minor    = element_blank(),
+					text 				= element_text(size=14),
+					axis.title.x 		= element_blank(),
+					axis.text.x 		= element_blank(),
+					axis.ticks.x 		= element_blank(),
+					axis.title.y		= element_text(vjust=4),
+					axis.text.y    		= element_text(size=10),
+					legend.key   		= element_rect(colour='white',fill=NULL,size=0.1),
+					legend.key.size 	= unit(1.4, 'lines'),
+					legend.text			= element_text(size=10),
+					strip.text.x 		= element_text(colour='white',size=10),
+					panel.background 	= element_rect(fill=NA, color='black'),
+					plot.margin			= unit(c(1,1,1,1),'cm'))
+
+		}
+
+		gt <- ggplot_gtable(ggplot_build(gg))
+		gt$layout$clip[gt$layout$name=='panel'] <- 'off'
+		gt
 	}
 
 	# create amplifications fishers object
@@ -171,24 +260,49 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 		scale_fill_brewer(type='qualitative', palette='Accent') +
 
 		geom_hline(aes(yintercept=0), colour='#666666') +	# y=0 axis
-		geom_vline(xintercept=head(chrom.n$chrom.n,-1)+0.5, colour='#666666', linetype=3) +	# chromosome demarcation
-		annotate(geom="text", x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=Inf, vjust=1.5, size=5) +	# chromosome enumeration
+		geom_vline(xintercept=head(chrom.n$chrom.n,-1)+0.5, colour='#666666', linetype=3)	# chromosome demarcation
 
-		theme(	legend.title 		= element_blank(),
-				panel.grid.major 	= element_blank(),
-				panel.grid.minor    = element_blank(),
-				text 				= element_text(size=14),
-				axis.title.x		= element_text(vjust=7),
-				axis.title.y		= element_text(vjust=1),
-				axis.text.x  		= element_text(angle=90,vjust=0.5,hjust=1,size=5),
-				axis.text.y    		= element_text(size=10),
-				legend.key   		= element_rect(colour="white",fill=NULL,size=0.1),
-				legend.key.size 	= unit(1.4, "lines"),
-				legend.text			= element_text(size=10),
-				strip.text.x 		= element_text(colour="white",size=10),
-				panel.background 	= element_rect(fill = NA, color = "black"),
-				plot.margin			= unit(c(1,1,1,1),"cm"))
-		gg
+		if(gene.names==TRUE) {
+
+			gg <- gg + annotate(geom='text', x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=Inf, vjust=2, size=5) +	# chromosome enumeration (top)
+				theme(	legend.title 		= element_blank(),
+						panel.grid.major 	= element_blank(),
+						panel.grid.minor    = element_blank(),
+						text 				= element_text(size=14),
+						axis.title.x		= element_text(vjust=7),
+						axis.text.x  		= element_text(angle=90,vjust=0.5,hjust=1,size=5),
+						axis.text.y    		= element_text(size=10),
+						legend.key   		= element_rect(colour='white', fill=NULL, size=0.1),
+						legend.key.size 	= unit(1.4, 'lines'),
+						legend.text			= element_text(size=10),
+						strip.text.x 		= element_text(colour='white',size=10),
+						panel.background 	= element_rect(fill=NA, color='black'),
+						plot.margin			= unit(c(1,1,1,1),'cm'))
+
+		} else {
+
+			gg <- gg + annotate(geom='text', x=Midx(c(0,chrom.n$chrom.n))+0.5, label=1:22, y=-Inf, vjust=2, size=5) +	# chromosome enumeration (bottom)
+			theme(	legend.title 		= element_blank(),
+					panel.grid.major 	= element_blank(),
+					panel.grid.minor    = element_blank(),
+					text 				= element_text(size=14),
+					axis.title.x 		= element_blank(),
+					axis.text.x 		= element_blank(),
+					axis.ticks.x 		= element_blank(),
+					axis.title.y		= element_text(vjust=4),
+					axis.text.y    		= element_text(size=10),
+					legend.key   		= element_rect(colour='white',fill=NULL,size=0.1),
+					legend.key.size 	= unit(1.4, 'lines'),
+					legend.text			= element_text(size=10),
+					strip.text.x 		= element_text(colour='white',size=10),
+					panel.background 	= element_rect(fill=NA, color='black'),
+					plot.margin			= unit(c(1,1,1,1),'cm'))
+
+		}
+
+		gt <- ggplot_gtable(ggplot_build(gg))
+		gt$layout$clip[gt$layout$name=='panel'] <- 'off'
+		gt
 	}
 
 
@@ -208,14 +322,17 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 			}
 		}
 
-	# 
-	SubsetTargets <- function(gene.cn) {
+
+	# use targets file to select genes
+	SubsetTargets <- function(gene.cn, targets) {
 		gene.cn %>%
 		mutate(chrom=ifelse(chrom=='X',23,ifelse(chrom=='Y',24,chrom))) %>%
 		mutate(chrom=as.numeric(chrom)) %>%
 		mutate(mid=(start+end)/2) %>%
 		rowwise %>%
-		mutate(in.target=InTargets(chrom,mid)) %>%
+		mutate(in.target={  # check if gene exists in target file
+				any(targets[[chrom]]$start.target < mid & mid < targets[[chrom]]$end.target)
+			}) %>%
 		filter(in.target==TRUE) %>%
 		select(-mid,-in.target) %>%
 		mutate(chrom=as.character(chrom)) %>%
@@ -224,60 +341,16 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 	}
 
 
-	# check if gene exists in target file
-	InTargets <- function(chrom,mid) {
-		any(targets[[chrom]]$start.target < mid & mid < targets[[chrom]]$end.target )
-	}
-
-	#----------------
-	# DATA PROCESSING
-	#----------------
-
-	if(!is.null(targets.file)){
-		# read in target file, select coordinate columns & split
-		targets <-
-			read.delim(targets.file,sep='\t',header=FALSE) %>%
-			tbl_df %>% .[,1:3] %>%
-			setNames(c('chrom','start.target','end.target')) %>%
-			mutate(chrom=ifelse(chrom=='X',23,ifelse(chrom=='Y',24,chrom))) %>%
-			mutate(chrom=as.numeric(chrom)) %>%
-			split(.$chrom)
-
-		# subset genes in target file
-		gene.cn.a %<>% SubsetTargets
-		gene.cn.b %<>% SubsetTargets
-	}
-
-	# rename hgnc to gene if needed
-	if('hgnc' %in% names(gene.cn.a)){
-		gene.cn.a %<>% rename(gene=hgnc)
-	}
-	if('hgnc' %in% names(gene.cn.b)){
-		gene.cn.b %<>% rename(gene=hgnc)
-	}
-
-
-	# format allosome & filter for overlapping genes
-	gene.cn.a %<>% ChromMod(allosome) %>% filter(gene %in% gene.cn.b$gene)
-	gene.cn.b %<>% ChromMod(allosome) %>% filter(gene %in% gene.cn.a$gene)
-
-
-	# generate table of chromosome breaks
-	chrom.n <-
-		gene.cn.a %>%
-		group_by(chrom) %>%
-		summarise(chrom.n=n()) %>%
-		mutate(chrom.n=cumsum(chrom.n))
-
-
 	# calculate % of cases with CN status
-	SampleStats <- function(gene.cn) {
+	SampleStats <- function(gene.cn, threshold) {
 		gene.cn %>%
 		arrange(chrom,start) %>%
-		select(-start) %>%
+		select(-matches('chrom|start|end|band|mid|stop')) %>%
 		mutate(gene=factor(gene,levels=unique(gene))) %>%
 		gather(sample,copy.num,-gene) %>%
-		filter(grepl('threshold', sample)) %>%  # remove EM copy number calls if present
+		do({ if(threshold==TRUE){  # conditionally select threshold calls
+				filter(., grepl('threshold', sample))
+			} else { . } }) %>%
 		mutate(n.samples = n_distinct(sample)) %>%
 		group_by(gene) %>% arrange(gene) %>%
 		# CN status sums
@@ -308,9 +381,58 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 	}
 
 
+	#----------------
+	# DATA PROCESSING
+	#----------------
+
+	if(!is.null(targets.file)){
+		# read in target file, select coordinate columns & split
+		targets <-
+			read.delim(targets.file, sep='\t', header=FALSE) %>%
+			tbl_df %>% .[,1:3] %>%
+			setNames(c('chrom','start.target','end.target')) %>%
+			mutate(chrom=ifelse(chrom=='X',23,ifelse(chrom=='Y',24,chrom))) %>%
+			mutate(chrom=as.numeric(chrom)) %>%
+			split(.$chrom)
+
+		# subset genes in target file
+		gene.cn.a %<>% SubsetTargets(targets)
+		gene.cn.b %<>% SubsetTargets(targets)
+	}
+
+
+	# rename hgnc to gene if needed
+	if('hgnc' %in% names(gene.cn.a)){
+		gene.cn.a %<>% rename(gene=hgnc)
+	}
+	if('hgnc' %in% names(gene.cn.b)){
+		gene.cn.b %<>% rename(gene=hgnc)
+	}
+	# rename stop to end if needed
+	if('stop' %in% names(gene.cn.a)){
+		gene.cn.a %<>% rename(end=stop)
+	}
+	if('stop' %in% names(gene.cn.b)){
+		gene.cn.b %<>% rename(end=stop)
+	}
+
+
+	# format allosome & filter for overlapping genes
+	gene.cn.a %<>% ChromMod(allosome) %>% filter(gene %in% gene.cn.b$gene)
+	gene.cn.b %<>% ChromMod(allosome) %>% filter(gene %in% gene.cn.a$gene)
+
+
+	# generate table of chromosome breaks
+	chrom.n <-
+		gene.cn.a %>%
+		group_by(chrom) %>%
+		summarise(chrom.n=n()) %>%
+		mutate(chrom.n=cumsum(chrom.n))
+
+
 	# calculate necessary statistics
 	sample.stats <-
-		inner_join(SampleStats(gene.cn.a), SampleStats(gene.cn.b), by='gene', suffix=c('.a','.b')) %>%
+		inner_join(SampleStats(gene.cn.a, threshold.a), SampleStats(gene.cn.b, threshold.b), by='gene', suffix=c('.a','.b')) %>%
 		rowwise %>%
 		# amplifications (+)
 		mutate(amp.pos.fisher  = fisher.test( data.frame( a = c(amp.gt.a,  amp.lt.eq.a),
@@ -387,8 +509,8 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 	#---------------
 
 	# call functions & add to list
-	gg.list <- list( GainPrevalence(sample.stats.gain.a, plot.title=str_c(plot.title.a, " Prevalance [Gains]")),
-					 GainPrevalence(sample.stats.gain.b, plot.title=str_c(plot.title.b, " Prevalance [Gains]")),
+	gg.list <- list( GainPrevalence(sample.stats.gain.a, plot.title=str_c(plot.title.a, " Prevalance [Gains]"), gene.names),
+					 GainPrevalence(sample.stats.gain.b, plot.title=str_c(plot.title.b, " Prevalance [Gains]"), gene.names),
 					 GainFishers(sample.stats.gain.fishers, plot.title=str_c(plot.title.a, ' x ', plot.title.b, " Fisher's Exact [Gains]")),
 					 AmpPrevalence(sample.stats.amp.a, plot.title=str_c(plot.title.a, " Prevalance [Amplifications]")),
 					 AmpPrevalence(sample.stats.amp.b, plot.title=str_c(plot.title.b, " Prevalance [Amplifications]")),
@@ -400,15 +522,10 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 	#---------
 
 	# plot to pdf
-	ggsave(str_c(file.name,'.pdf'), do.call(arrangeGrob, c(gg.list, ncol=1)), width=26, height=26)
+	suppressWarnings(ggsave(str_c(file.name,'.pdf'), do.call(arrangeGrob, c(gg.list, ncol=1)), width=26, height=26))
+
+	cat('done\n')
 
 }
-
-
-#-----
-# MAIN
-#-----
-
-#GenCN(gene.cn.a, gene.cn.b, plot.title.main='SCLC vs CESC', plot.title.a='SCLC', plot.title.b='CESC', allosome='none', suffix='now')
 
 
