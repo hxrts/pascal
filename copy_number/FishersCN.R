@@ -343,9 +343,9 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 
 	# calculate % of cases with CN status
 	SampleStats <- function(gene.cn, threshold) {
-		gene.cn %>%
-		select(-matches('chrom|start|end|band|mid|stop')) %>%
-		gather(sample,copy.num,-gene) %>%
+		gene.cn.a %>%
+		select(-matches('band|mid|stop')) %>%
+		gather(sample,copy.num,-gene,-chrom,-start,-end) %>%
 		do({ if(threshold==TRUE){  # conditionally select threshold calls
 				filter(., grepl('threshold', sample))
 			} else { . } }) %>%
@@ -433,9 +433,9 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 	# calculate necessary statistics
 	message(blue('- calculating sample statistics'))
 	sample.stats <-
-		inner_join(SampleStats(gene.cn.a, threshold.a), SampleStats(gene.cn.b, threshold.b), by='gene', suffix=c('.a','.b')) %>%
-		bind_cols(gene.cn.a %>% select(chrom,start,end),.) %>%
+		inner_join(SampleStats(gene.cn.a, threshold.a), SampleStats(gene.cn.b, threshold.b) %>% select(-chrom,-start,-end), by='gene', suffix=c('.a','.b')) %>%
 		arrange(chrom, start) %>%
+		ungroup %>%
 		mutate(gene=factor(gene,levels=unique(gene))) %>%
 		rowwise %>%
 		# amplifications (+)
@@ -518,6 +518,8 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 
 	message(blue('- building plots'))
 
+	options(device="pdf")
+
 	# call functions & add to plot list
 	gg.list <- list( GainPrevalence(sample.stats.gain.a, plot.title=str_c(plot.title.a, " Prevalance [Gains]"), gene.names),
 					 GainPrevalence(sample.stats.gain.b, plot.title=str_c(plot.title.b, " Prevalance [Gains]"), gene.names),
@@ -532,7 +534,7 @@ GenCN <- function(gene.cn.a, gene.cn.b, plot.title.main, plot.title.a, plot.titl
 	#---------
 
 	# plot to pdf
-	suppressWarnings(ggsave(str_c(file.name,'.pdf'), do.call(arrangeGrob, c(gg.list, ncol=1)), width=26, height=26))
+	suppressWarnings(ggsave(str_c(file.name,'.pdf'), do.call(arrangeGrob, c(gg.list, ncol=1)), device='pdf', width=26, height=26))
 
 	message(green('[ done ]'))
 
