@@ -7,38 +7,45 @@
 
 pacman::p_load( dplyr,lazyeval,readr,tidyr,magrittr,purrr,stringr,rlist,openxlsx,  # base
                 crayon,colorspace,RColorBrewer,                                    # coloring
-                ggplot2,grid,gridExtra,gplots,scales,                               # plot layout
+                ggplot2,grid,gridExtra,gplots,scales,                              # plot layout
                 parallel,
                 ABSOLUTE )
+
 
 #-----------
 # PARAMETERS
 #-----------
 
-project.name    = 'cancer_type'
+build.maf       = TRUE
+build.cncf      = FALSE
+
+absolute.dir    = 'absolute'
 platform        = 'Illumina_WES'  # possible values: SNP_250K_STY | SNP_6.0 | Illumina_WES
 cncf.dir        = 'facets/cncf'
-absolute.dir    = 'absolute'
 
 
 #----------
 # FUNCTIONS
 #----------
 
-NewHeader <- function(cncf.file, seg.dir, absolute.dir){
+CncfHeader <- function(cncf.file, cncf.dir){
 
-    # read seg files
-    cncf <-
-        cncf.file %>% str_c(seg.dir, ., sep='/') %>%
-        read.delim(stringsAsFactors=FALSE, sep='\t') %>%
-        tbl_df
+   # read cncf files
+   cncf.file %>%
+   str_c(cncf.dir, ., sep='/') %>%
+   read.delim(stringsAsFactors=FALSE, sep='\t') %>%
+   tbl_df
+}
 
-    # write copies using correct column headers
-    cncf %>%
-    rename(Chromosome=chrom, Start=loc.start, End=loc.end, Num_Probes=num.mark, Segment_Mean=cnlr.median) %>%
-    write_tsv(str_c(absolute.dir, 'segment', str_c(cncf.file %>% str_split('.cncf.') %>% list.map(.[[1]]) %>% unlist, '.seg.txt'), sep='/'))
+CncfWrite <- function(cncf, absolute.dir) {
 
-    return(cncf)
+   out.file <- str_c(absolute.dir, 'segment', str_c(cncf.file %>% str_split('.cncf.') %>% list.map(.[[1]]) %>% unlist, '.cncf.txt'), sep='/')
+
+   # write copies using correct column headers
+   cncf %>%
+   rename(Chromosome=chrom, Start=loc.start, End=loc.end, Num_Probes=num.mark, cncfment_Mean=cnlr.median) %>%
+   write_tsv(out.file)
+
 }
 
 
@@ -46,20 +53,18 @@ NewHeader <- function(cncf.file, seg.dir, absolute.dir){
 # STEP 1
 #-------
 
-# create step 1 directories
-MakeDirs( str_c(absolute.dir, '/segment'),
-          str_c(absolute.dir, '/maf'),
-          str_c(absolute.dir, '/results') )
-
-
 # load mutations, etc
 source('modules/summary/variantMaps.R')
+
+# create directories
+MakeDirs( str_c(absolute.dir, '/cncfment'))
 
 
 # process cncfs
 cncfs <-
     list.files('facets', pattern='*.cncf.txt') %>%
-    list.map(NewHeader(., cncf.dir, absolute.dir)) %>%
+    list.map(CncfHeader(., cncf.dir)) %>%
+    list.map(CncfWrite(., absolute.dir)) %>%
     bind_rows %>%
     mutate(sample=ID) %>%
     separate(sample, into=c('sample', 'normal'), sep='_')
@@ -99,17 +104,17 @@ max.ploidy       = 7
 primary.disease  = "disease_name"
 sample.name      = "TUMOR_NORMAL"
 platform         = "Illumina_WES"
-max.as.seg.count = 3500
+max.as.cncf.count = 3500
 copynum.type     = "total"
 max.neg.genome   = 0
 max.non.clonal   = 0
 min.mut.af       = 0
-seg.dat.fn       = "absolute/segment/TUMOR_NORMAL.seg.txt"
+cncf.dat.fn       = "absolute/cncfment/TUMOR_NORMAL.cncf.txt"
 results.dir      = "absolute/results"
 output.fn.base   = "TUMOR_NORMAL"
 maf.fn           = "absolute/maf/TUMOR_NORMAL.maf.txt"
 
-#> RunAbsolute(seg.dat.fn, sigma.p, max.sigma.h, min.ploidy, max.ploidy, primary.disease, platform,sample.name, results.dir, max.as.seg.count, max.non.clonal, max.neg.genome, copynum.type, maf.fn = maf.fn, min.mut.af = min.mut.af, output.fn.base = output.fn.base, verbose = T)
+#> RunAbsolute(cncf.dat.fn, sigma.p, max.sigma.h, min.ploidy, max.ploidy, primary.disease, platform,sample.name, results.dir, max.as.cncf.count, max.non.clonal, max.neg.genome, copynum.type, maf.fn = maf.fn, min.mut.af = min.mut.af, output.fn.base = output.fn.base, verbose = T)
 
 #----------------------
 # STEP 2 (after review)
@@ -121,7 +126,7 @@ maf.fn           = "absolute/maf/TUMOR_NORMAL.maf.txt"
 # facets histograms
 #------------------
 
-library(scales)
+library()
 
 MakeDirs <- function(dir.list, debug=TRUE) {
     dir.list %>% list.map({
@@ -264,7 +269,6 @@ map2(.x=muts.maf, .y=cncfs$ID %>% unique %>% sort, ~ {
 
 
 
-library(ABSOLUTE)
 sigma.p <- 0
 max.sigma.h <- 0.07
 min.ploidy <- 0.95
@@ -272,14 +276,14 @@ max.ploidy <- 7
 primary.disease <- "breast"
 sample.name <- "R06P_R06N"
 platform <- "Illumina_WES"
-max.as.seg.count <- 3500
+max.as.cncf.count <- 3500
 copynum.type <- "total"
 max.neg.genome <- 0
 max.non.clonal <- 0
 min.mut.af <- 0
-seg.dat.fn <- "absolute/segment/R06P_R06N.seg.txt"
+cncf.dat.fn <- "absolute/cncfment/R06P_R06N.cncf.txt"
 results.dir <- "absolute/results"
 output.fn.base = "R06P_R06N"
 maf.fn = "absolute/maf/R06P_R06N.maf.txt"
 
-RunAbsolute(seg.dat.fn, sigma.p, max.sigma.h, min.ploidy, max.ploidy, primary.disease, platform,sample.name, results.dir, max.as.seg.count, max.non.clonal, max.neg.genome, copynum.type, maf.fn = maf.fn, min.mut.af = min.mut.af, output.fn.base = output.fn.base, verbose = T)
+RunAbsolute(cncf.dat.fn, sigma.p, max.sigma.h, min.ploidy, max.ploidy, primary.disease, platform,sample.name, results.dir, max.as.cncf.count, max.non.clonal, max.neg.genome, copynum.type, maf.fn = maf.fn, min.mut.af = min.mut.af, output.fn.base = output.fn.base, verbose = T)
