@@ -42,13 +42,13 @@ pacman::p_load( Vennerable,                                                     
 # program control
 #----------------
 
-# vm <- function(){ source('modules/summary/variantMaps.R') }
+# vm <- function(){ source('pascal/variant_maps/variantMaps.R') }
 
-commandArgs <- function() 1:3
+# commandArgs <- function() 1:3
 
 run.input.parameters = 1
 run.data.processing  = 1
-run.sub.sets         = 1
+run.sub.sets         = 0
 run.cn.heatmap.plots = 1
 run.cascade.plots    = 1
 run.trees            = 1
@@ -56,13 +56,14 @@ run.trees            = 1
 run.fishers.plots    = 0
 run.experimental     = 0
 
+
 #-------------------
 # subgroup selection
 #-------------------
 
-one.sub              = FALSE  # only run one sample
-sub.run              = 'syn_nonsyn'  # 'nonsyn'
-sub.num              = 7
+sub.sub              = FALSE  # run samples individually
+sub.run              = 'syn_nonsyn'  # syn_nonsyn, nonsyn
+sub.nums             = 7
 
 
 #-------------------
@@ -83,7 +84,7 @@ verbose              = FALSE
 excel.summary.sheet  = 'MUTATION_SUMMARY'
 allosome             = 'merge'
 sub.set.combinations = FALSE
-use.sufam            = TRUE
+use.sufam            = FALSE
 
 
 #-------------------
@@ -233,7 +234,7 @@ QuietStop <- function(txt) {
 # Fishers functions
 #------------------
 
-source('modules/summary/variantFishers.R')
+source('pascal/variant_maps/variantFishers.R')
 
 
 #--------------------------
@@ -1152,7 +1153,7 @@ PlotCNHeatmap <- function(gene.cn, file.name, sample.names=NULL, threshold=FALSE
         sample.names <- gene.cn %>% select(matches('threshold')) %>% names %>% sort
         sample.names <- sample.names[sample.names %>% gsub('[^0-9]', '',.) %>% as.numeric %>% order]
     } else if(is.null(sample.names)) {
-        sample.names <- gene.cn %>% names %>% list.filter(! . %in% c('hgnc','gene','chrom','start','mid','end','band'))
+        sample.names <- gene.cn %>% names %>% list.filter(! . %in% c('hgnc', 'gene', 'chrom', 'start', 'mid', 'end', 'band'))
         sample.names <- sample.names[sample.names %>% gsub('[^0-9]', '',.) %>% as.numeric %>% order]
     }
 
@@ -1160,7 +1161,7 @@ PlotCNHeatmap <- function(gene.cn, file.name, sample.names=NULL, threshold=FALSE
     chr.sep <- chr.rle$lengths %>% cumsum
     chr.mid <- c(0, chr.sep[-length(chr.sep)]) + chr.rle$lengths/2
 
-    pdf(file.name, width=12, height=3 + 0.25*length(sample.names))
+    pdf(file.name, width=24, height=2+length(sample.names)/2)
 
         g.cn <- gene.cn %>% select(one_of(rev(sample.names)))
 
@@ -1170,11 +1171,11 @@ PlotCNHeatmap <- function(gene.cn, file.name, sample.names=NULL, threshold=FALSE
         image(as.matrix(g.cn), col=c('#CF3A3D', '#DC9493', '#FFFFFF', '#7996BA', '#2A4B94'), xaxt='n', yaxt='n', zlim=c(-2, 2))
 
         for (i in seq(-1, max(((2*(ncol(g.cn)-1))+1),1), 2)) {
-            abline(h=i/(2*(ncol(g.cn)-1)), col="white", lwd=2)
+            abline(h=i/(2*(ncol(g.cn)-1)), col='white', lwd=2)
         }
 
         for (i in (chr.sep*2)-1) {
-            abline(v=i/((max(chr.sep)-1)*2), lwd=1.5, col='grey', lty="dashed")
+            abline(v=i/((max(chr.sep)-1)*2), lwd=1.5, col='grey', lty='dashed')
         }
 
         box()
@@ -1182,22 +1183,23 @@ PlotCNHeatmap <- function(gene.cn, file.name, sample.names=NULL, threshold=FALSE
          axis( 1,
                at       = chr.mid/(max(chr.sep)-1),
                label    = chr.rle$values,
-               cex.axis = 0.8,
+               cex.axis = 1.3,
                tick     = FALSE )
 
          axis( 2,
-               at       = if(ncol(g.cn)==1){0.5}else{seq(0, 1, 1/max((ncol(g.cn)-1),1))},
+               at       = if(ncol(g.cn)==1){ 0.5 }else{seq(0, 1, 1/max((ncol(g.cn)-1),1))},
                label    = sub('T_.*', '', colnames(g.cn)),
                las      = 2,
-               cex.axis = 1,
+               cex.axis = 1.1,
                tick     = FALSE )
 
          legend( 'bottom',
-                 inset  = c(0, -0.33),
+                 inset  = c(0, -0.5),
                  legend = c('Homozygous deletion', 'Loss', 'Gain', 'Amplification'),
                  fill   = c('#CF3A3D', '#DC9493', '#7996BA', '#2A4B94'),
                  xpd    = TRUE,
-                 ncol   = 2 )
+                 ncol   = 2,
+                 cex    = 1.1 )
      dev.off()
 
 }
@@ -1288,7 +1290,14 @@ SubGroup <- function(sub.num) {
 
    # write master summary sheet sheet
    if(sub.num==0) {
-      gene.cn.curated <- read.delim('facets/geneCN_curated.tsv', sep='\t', stringsAsFactors=FALSE) %>% mutate(chrom=as.character(chrom)) %>% mutate(chrom=ifelse(chrom==23, 'X', chrom)) %>% tbl_df
+      gene.cn.curated <-
+         read.delim('facets/geneCN.curated.txt', sep='\t', stringsAsFactors=FALSE) %>%
+         mutate(chrom=as.character(chrom)) %>%
+         mutate(chrom=ifelse(chrom==23, 'X', chrom)) %>%
+         rowwise %>%
+         mutate(mid=(start+end)/2) %>%
+         ungroup %>%
+         tbl_df
 
       system('csvcut -tc SAMPLE,TOTAL_READS,MEAN_TARGET_COVERAGE,PCT_TARGET_BASES_2X,PCT_TARGET_BASES_50X,PCT_TARGET_BASES_100X metrics/hs_metrics.txt > summary/metrics.csv')
       metrics <- read.delim('summary/metrics.csv', sep=',', stringsAsFactors=FALSE)
@@ -2332,28 +2341,32 @@ H1('SUB SETS')
 #-------------
 
 
-for(sub.run in c('nonsyn', 'syn_nonsyn')) {
+if(sub.sub != TRUE) {
 
-   if(sub.run == 'nonsyn') {
+   for(sub.run in c('nonsyn', 'syn_nonsyn')) {
 
-      H2('NONSYNONYMOUS')
-      run.variants <-
-         variants %>%
-         filter(effect != 'Silent') %>%
-         filter(ccf > 0)
+      if(sub.run == 'nonsyn') {
 
-    } else {
+         H2('NONSYNONYMOUS')
+         run.variants <-
+            variants %>%
+            filter(effect != 'Silent') %>%
+            filter(ccf > 0)
 
-      H2('NONSYNONYMOUS + SYNONYMOUS')
-      run.variants <-
-         variants %>% filter(ccf > 0)
+       } else {
 
-    }
+         H2('NONSYNONYMOUS + SYNONYMOUS')
+         run.variants <-
+            variants %>% filter(ccf > 0)
 
-    if(one.sub != TRUE) {
-      mclapply(0:(nrow(sub.groups)-1), function(sub.num) { SubGroup(sub.num) }, mc.silent=FALSE, mc.cores=20)
-   } else {
-      SubGroup(sub.num)
+       }
+
+   mclapply(0:(nrow(sub.groups)-1), function(sub.num) { SubGroup(sub.num) }, mc.silent=FALSE, mc.cores=20)
+
    }
 
+} else if(length(sub.nums) != 1) {
+   lapply(sub.nums, function(sub.num) { SubGroup(sub.num) })
+} else {
+   SubGroup(sub.nums)
 }
