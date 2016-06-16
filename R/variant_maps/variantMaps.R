@@ -42,8 +42,6 @@ pacman::p_load( Vennerable,                                                     
 # program control
 #----------------
 
-# vm <- function(){ source('pascal/variant_maps/variantMaps.R') }
-
 # commandArgs <- function() 1:3
 
 run.input.parameters = 1
@@ -234,7 +232,7 @@ QuietStop <- function(txt) {
 # Fishers functions
 #------------------
 
-source('pascal/variant_maps/variantFishers.R')
+source('pascal/R/variant_maps/variantFishers.R')
 
 
 #--------------------------
@@ -592,7 +590,7 @@ FormatEvents <- function(events, col.names=NULL, drop=FALSE, allosome='merge', k
                    'Effect'='variant', 'Variant_Classification'='variant', 'ANN....EFFECT'='variant', 'ANN[*].EFFECT'='variant',
                    'effect'='effect',
                    'ExAC_AF'='ex.af', 'ex.af'='ex.af',
-                   'end'='end', 'end'='stop',
+                   'end'='end', 'stop'='end', 'End_position'='end',
                    'fathmm'='fathmm', 'FATHMM'='fathmm', 'fathmm_pred'='fathmm',
                    'gene'='gene', 'Gene'='gene', 'Hugo_Symbol'='gene', 'GENE'='gene', 'hgnc'='gene', 'ANN....GENE'='gene', 'ANN[*].GENE'='gene', 'Gene.symbol'='gene', 'Hugo_Symbol'=='gene',
                    'haploinsufficient'='haplo', 'hap_insuf'='haplo', 'haplo'='haplo',

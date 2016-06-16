@@ -1,0 +1,47 @@
+Package: pascal
+Title: Bioinformatics analysis & plotting tools.
+Description: Working functions, wrappers, and figure tools for laboratory use.
+URL: https://github.com/hxrts/pascal
+Version: 0.0.1
+License: MIT
+Authors@R: c(
+    person("Sam", "Berman", , , c("aut", "cre", "cph")))
+Depends:
+    R (>= 3.0.2)
+Imports:
+    Vennerable,
+    ggdendro,
+    dendextend,
+    dendextendRcpp,
+    dynamicTreeCut,
+    gclus,
+    phangorn,
+    gtools,
+    nnet,
+    crayon,
+    colorspace,
+    RColorBrewer,
+    ggplot2,
+    grid,
+    gridExtra,
+    gplots,
+    dplyr,
+    lazyeval,
+    tidyr,
+    magrittr,
+    purrr,
+    stringr (>= 0.5),
+    rlist,
+    readr,
+    openxlsx,
+    parallel,
+    optparse
+    brew,
+    digest,
+    methods,
+    Rcpp (>= 0.11.0)
+Suggests:
+    testthat (>= 0.8.0),
+    knitr
+VignetteBuilder: knitr
+LinkingTo: Rcpp
