@@ -35,7 +35,7 @@ Imports:
     readr,
     openxlsx,
     parallel,
-    optparse
+    optparse,
     brew,
     digest,
     methods,
@@ -45,3 +45,4 @@ Suggests:
     knitr
 VignetteBuilder: knitr
 LinkingTo: Rcpp
+RoxygenNote: 0.0.1
