@@ -54,10 +54,10 @@ CncfWrite <- function(cncf, absolute.dir) {
 #-------
 
 # load mutations, etc
-source('modules/summary/variantMaps.R')
+source('pascal/R/variant_maps/variantMaps.R')
 
 # create directories
-MakeDirs( str_c(absolute.dir, '/cncfment'))
+MakeDirs( str_c(absolute.dir, '/segment'))
 
 
 # process cncfs
@@ -85,6 +85,23 @@ muts.maf <-
            Start_position         = pos) %>%
     split(.$Tumor_Sample_Barcode)
 
+# process mafs
+muts.maf <-
+    muts %>%
+    mutate(dbSNP_Val_Status='validated') %>%
+    arrange(sample, chrom, pos) %>%
+    mutate(t_ref_count = round(depth.t * (1-maf.t))) %>%
+    mutate(t_alt_count = round(depth.t * maf.t)) %>%
+    mutate(Tumor_Sample_Barcode = str_c(sample, normal, sep='_')) %>%
+    select(Tumor_Sample_Barcode,
+           Hugo_Symbol            = gene,
+           t_ref_count,
+           t_alt_count,
+           dbSNP_Val_Status,
+           Chromosome             = chrom,
+           Start_position         = pos) %>%
+    arrange(Chromosome, Start_position) %>%
+    split(.$Tumor_Sample_Barcode)
 
 map2(.x=muts.maf, .y=names(muts.maf), ~ {
     write_tsv(.x, str_c(absolute.dir, '/maf/', .y, '.maf.txt'))

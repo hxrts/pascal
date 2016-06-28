@@ -1,5 +1,5 @@
 Package: pascal
-Title: Bioinformatics analysis & plotting tools.
+Title: Genomics / bioinformatics analysis & visualization R package.
 Description: Working functions, wrappers, and figure tools for laboratory use.
 URL: https://github.com/hxrts/pascal
 Version: 0.0.1

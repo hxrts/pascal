@@ -148,6 +148,29 @@ TypeCol <- function(events, columns, types) {
 }
 
 
+#---------------------------------
+# multiple pheno columns to single
+#---------------------------------
+
+MergePheno <- function(events, merge.cols, col.name='pheno') {
+    events %>%
+    do({ df <- .
+        pheno <- select(df, one_of(merge.cols)) %>%
+        apply(1, function(pheno){
+            pheno %<>% na.omit
+            if(length(pheno)==0){
+                pheno=NA
+            } else {
+                pheno
+            }
+        })
+        df <- mutate(df, col.name=pheno)
+        colnames(df)[colnames(df) == 'col.name'] <- col.name
+        return(df)
+    })
+}
+
+
 #------------------------------------
 # rename columns & clean nomenclature
 #------------------------------------
@@ -259,18 +282,21 @@ FormatEvents <- function(events, col.names=NULL, drop=FALSE, allosome='merge', k
                 if(!all(is.na(events$effect))){ filter(events,!is.na(effect)) }
                 events
             } %>%
+            mutate(effect=gsub('^\\s+|\\s+$', '', effect)) %>%
             unique %>%
             mutate(effect=
                 ifelse(effect%in%c('STOP_GAINED','Nonsense_Mutation','stop_gained&splice_region_variant','stop_gained','Nonsense_Mutation','Stop_Codon_Ins','nonsense','truncating snv','Truncating snv','Truncating snv','Truncating SNV'),'Truncating SNV',
                 ifelse(effect%in%c('FRAME_SHIFT','FRAME_SHIFT','Frame_Shift_Del','Frame_Shift_Ins','frameshift_variant&splice_acceptor_variant&splice_region_variant&intron_variant','frameshift_variant','frameshift_variant&stop_gained','frameshift_variant&splice_region_variant','frameshift_variant&splice_acceptor_variant&splice_region_variant&splice_region_variant&intron_variant','Frame_Shift_Del','Frame_Shift_Ins','frame_shift_del','frame_shift_ins','frameshift indel','Frameshift indel','Frameshift In-Del','frameshift_variant'),'Frameshift In-Del',
-                ifelse(effect%in%c('NON_SYNONYMOUS_CODING','STOP_LOST','Missense_Mutation','missense_variant','missense_variant&splice_region_variant','missense_variant|missense_variant','Missense_Mutation','missense','missense snv','Missense snv','Missense SNV'),'Missense SNV',
+                ifelse(effect%in%c('NON_SYNONYMOUS_CODING','STOP_LOST','Missense_mutation','missense_variant','missense_variant&splice_region_variant','missense_variant|missense_variant','Missense_Mutation','missense','missense snv','Missense snv','Missense SNV'),'Missense SNV',
                 ifelse(effect%in%c('CODON_CHANGE_PLUS_CODON_DELETION','CODON_DELETION','CODON_INSERTION','In_Frame_Ins','In_Frame_Del','disruptive_inframe_deletion','disruptive_inframe_insertion','inframe_deletion','inframe_insertion','disruptive_inframe_deletion&splice_region_variant','inframe_deletion&splice_region_variant','In_Frame_Del','In_Frame_Ins','in_frame_del','in_frame_ins','inframe indel','Inframe indel','Inframe In-Del'),'Inframe In-Del',
                 ifelse(effect%in%c('splice_donor_variant','splice_region_variant','splice_acceptor_variant','SPLICE_SITE_DONOR','SPLICE_SITE_ACCEPTOR','SPLICE_SITE_REGION','Splice_Site','splice_donor_variant&intron_variant','splice_acceptor_variant&intron_variant','splicing','splice_donor_variant&splice_region_variant&intron_variant','splice_donor_variant&disruptive_inframe_deletion&splice_region_variant&splice_region_variant&intron_variant','Splice_Site','splice','splice site variant','Splice site variant','missense_variant & splice_region_variant'),'Splice site variant',
                 ifelse(effect%in%c('STOP_LOST','START_LOST','START_GAINED','UTR_5_PRIME','start_lost','stop_lost',"5'UTR","5'Flank",'De_novo_Start_InFrame','De_novo_Start_OutOfFrame','Stop_Codon_Del','Start_Codon_SNP','Start_Codon_Ins','Start_Codon_Del','Nonstop_Mutation','nonstop','upstream, start/stop, or de novo modification','Upstream, start/stop, or de novo modification'),'Upstream, start/stop, or de novo modification',
-                ifelse(effect%in%c('synonymous_variant','splice_region_variant&synonymous_variant','splice_region_variant&synonymous_variant','non_coding_exon_variant','upstream_gene_variant','downstream_gene_variant','intron_variant','frameshift_variant&splice_donor_variant&splice_region_variant&splice_region_variant&intron_variant','non_coding_exon_variant|synonymous_variant','SYNONYMOUS_CODING','synonymous_variant|synonymous_variant','splice_region_variant&synonymous_variant|splice_region_variant&non_coding_exon_variant','splice_acceptor_variant & intron_variant','intragenic_variant',"3'UTR",'IGR','lincRNA','RNA','Intron','silent','intron_exon','silent','Silent','intron_variant & missense_variant'),'Silent',
+                ifelse(effect%in%c('synonymous_variant','intron_variant','splice_region_variant&synonymous_variant','splice_region_variant&synonymous_variant','non_coding_exon_variant','upstream_gene_variant','downstream_gene_variant','intron_variant','frameshift_variant&splice_donor_variant&splice_region_variant&splice_region_variant&intron_variant','non_coding_exon_variant|synonymous_variant','SYNONYMOUS_CODING','synonymous_variant|synonymous_variant','splice_region_variant&synonymous_variant|splice_region_variant&non_coding_exon_variant','splice_acceptor_variant & intron_variant','intragenic_variant',"3'UTR",'IGR','lincRNA','RNA','Intron','silent','intron_exon','silent','Silent','intron_variant & missense_variant'),'Silent',
                 ifelse(effect%in%c('Amplification','amplification','amp','2'),'Amplification',
+                ifelse(effect%in%c('Gain','gain','1'),'Gain',
+                ifelse(effect%in%c('Loss','loss','-1'),'Loss',
                 ifelse(effect%in%c('Deletion','deletion','del','-2'),'Deletion',
-                ifelse(is.na(effect),NA,str_c('UNACCOUNTED: ', effect))))))))))))
+                ifelse(is.na(effect), NA, effect)))))))))))))
 
         # warn on unknown effects
         if(all(is.na(events$effect))){
@@ -299,6 +325,449 @@ FormatEvents <- function(events, col.names=NULL, drop=FALSE, allosome='merge', k
     }
 
     return(events)
+}
+
+
+#----------------------------------
+# prepare melted table for plotting
+#----------------------------------
+
+OrgEvents <- function(events, sample.order=NULL, pheno.order=NULL, sub.sets.pheno=NULL, recurrence=1, allosome='merge', event.type='gene', run.type=NULL, debug=FALSE) {
+
+    # sample.order:
+    #   NULL = arrange alphabetically
+    #   character string = specify specific order
+    #
+    # recurrence:
+    #   integer cutoff for recurrent mutations
+    #
+    # allosome:
+    #
+    #   'none'      = exclude X & Y chromosome
+    #   'merge'     = treat X & Y coordinates as homologous pair
+    #   'distinct'  = treat X & Y as seperate, sequential chromosomes
+
+    # specify output columns
+    col.names <- c('sample','gene','chrom','effect','pheno','band','span','pos','maf','ccf','loh','cancer.gene.census','clonality','pathogenic', 'k.l.c')
+
+    if(!'ccf' %in% names(events)) {
+      events %<>% mutate(ccf=1)
+    }
+
+    # add dummy column names
+    events %<>% DummyCols(col.names, debug)
+
+    # remove rows which can't be plotted
+    events %<>% filter(!is.na(pheno)) %>% filter(!is.na(effect) | !is.na(ccf))
+
+    if(is.null(sub.sets.pheno)) {
+        sub.sets.pheno <- events %>% select(sample, pheno) %>% unique %>% spread(pheno, pheno)
+    }
+
+    if(is.null(pheno.order)) {
+        pheno.order <- events$pheno %>% unique %>% sort
+    }
+
+    # clip gene names to first if pipe seperated
+    events %<>% rowwise %>% mutate(gene=gene %>% str_split('\\|') %>% .[[1]] %>% head(1)) %>% ungroup
+
+    # effect prescedence
+    events %<>%
+        select(one_of(col.names)) %>%
+        unique %>%
+        filter(!is.na(effect)) %>%
+        # rank variant importance for plot overlay
+        mutate(precedence=
+            ifelse(effect=='Deletion',1,
+            ifelse(effect=='Amplification',2,
+            ifelse(effect=='Truncating SNV',3,
+            ifelse(effect=='Frameshift In-Del',4,
+            ifelse(effect=='Missense SNV',5,
+            ifelse(effect=='Inframe In-Del',6,
+            ifelse(effect=='Splice site variant',7,
+            ifelse(effect=='Upstream, start/stop, or de novo modification',8,
+            ifelse(effect=='Silent',9,
+            NA))))))))))
+
+    if(event.type=='gene') {
+
+        events %<>%
+            # remove genes with lower prescedence
+            group_by(sample, gene) %>%
+            arrange(gene, precedence) %>%
+            top_n(1) %>%
+            # count number of variants per gene
+            unique %>%
+            ungroup %>%
+            group_by(gene) %>%
+            mutate(n.gene=n()) %>%
+            ungroup %>%
+            { events <- .
+                if(recurrence > 0) { events %<>% filter(n.gene >= recurrence) }
+                return(events)
+            } %>%
+            unique
+
+        if(is.null(sample.order)) {
+
+            sample.pool <- events$sample %>% unique
+
+            while(length(sample.order) < length(sample.pool)) {
+
+                sub.samples <- sample.pool %>% list.filter(!. %in% sample.order)
+                take  = 1
+                pick.sample = 0
+                n.rounds = 1
+
+                while(pick.sample!=1) {
+
+                    pick.df <- lapply(sub.samples, function(sub.sample) {
+
+                        sub.events <-
+                            events %>%
+                            select(sample, gene, n.gene) %>%
+                            arrange(desc(n.gene)) %>%
+                            filter(sample==sub.sample) %>%
+                            bind_rows(data_frame(n.gene=c(0,0,0)))
+
+                        num.v = sub.events$n.gene
+                        sum.n <- combn(num.v, take) %>% apply(2, sum) %>% max
+
+                        data_frame(sample=sub.sample, sum.n=sum.n)
+                    }) %>%
+                    bind_rows %>%
+                    filter(sum.n==max(sum.n))
+
+                    pick.sample = nrow(pick.df)
+
+                    if(pick.sample == 1) {
+
+                        sample.order <- c(sample.order, pick.df$sample)
+
+                    } else if(n.rounds == 2) {
+
+                        pick.sample = 1
+
+                        sample.order <- c(sample.order,
+                            events %>%
+                            filter(sample %in% sub.samples) %>%
+                            group_by(sample) %>%
+                            summarise(burden=n()) %>%
+                            arrange(desc(burden)) %>%
+                            top_n(1, burden) %>%
+                            .$sample )
+
+                    } else {
+
+                        take = take + 1
+                        sub.samples = pick.df$sample
+                        n.rounds = n.rounds + 1
+
+                    }
+                }
+            }
+        }
+
+        CheckDepth <- function(gene) {
+            found.gene = FALSE
+            while(found.gene == FALSE) {
+                for (sample.n in 1:length(sample.order)) {
+                    if(gene %in% (events %>% filter(sample %in% sample.order[sample.n]) %>% .$ gene)) {
+                        found.gene = TRUE
+                        return(sample.n)
+                    }
+                }
+            }
+        }
+
+        events %<>%
+        rowwise %>%
+        mutate(sample.order.depth=CheckDepth(gene)) %>%
+        ungroup %>%
+        arrange(desc(n.gene), sample.order.depth, sample, desc(ccf), precedence, gene)
+
+        if(!is.null(run.type)) {
+           events %<>%
+            rowwise %>%
+            mutate(gene=ifelse(k.l.c==TRUE, str_c('* ',gene), gene)) %>%
+            ungroup
+        }
+    }
+
+    if(event.type=='band') {
+        events %<>%
+            group_by(band) %>%
+            mutate(n.band=n()) %>%
+            ungroup %>%
+            rowwise %>%
+            mutate(band=str_c('chr',chrom,': ',band))
+    }
+
+    if(event.type=='span') {
+        events <-
+            events %>%
+            # remove spans with lower prescedence
+            group_by(sample, span) %>%
+            arrange(span, precedence) %>%
+            top_n(1, precedence) %>%
+            # count number of variants per gene
+            unique %>%
+            ungroup %>%
+            group_by(span) %>%
+            mutate(n.span=n()) %>%
+            ungroup %>%
+            { events <- .
+                if(recurrence>0) {events %<>% filter(n.span>=recurrence)}
+                return(events)
+            } %>%
+            unique %>%
+            arrange(desc(n.span), sample, desc(ccf), precedence, span)
+    }
+
+    # define plot gene order
+    events %<>%
+        mutate(order=row_number()) %>%
+        ungroup %>%
+        select(-precedence) %>%
+        unique
+
+    missing.samples <- sample.order[!sample.order %in% events$sample]
+
+    missing.pheno <-
+        sub.sets.pheno %>%
+        MergePheno(merge.cols=pheno.order, col.name='pheno') %>%
+        select(sample, pheno) %>%
+        filter(sample %in% missing.samples)
+
+    if(length(missing.samples) > 0){
+
+        message(yellow(str_c('missing specified samples: ',missing.samples,'\n')))
+
+        missing.fill <-
+            expand.grid(missing.samples,unique(unlist(events[,event.type])), stringsAsFactors=FALSE) %>%
+            set_names(c('sample', event.type)) %>%
+            tbl_df %>%
+            left_join(missing.pheno) %>%
+            invisible
+    }
+
+    if(event.type=='gene') {
+        events.fill <-
+            events %>%
+            select(sample,effect,pheno,gene) %>%
+            unique %>%
+            group_by(pheno) %>%
+            spread(gene,effect) %>%
+            gather(gene,effect,-pheno,-sample) %>%
+            filter(is.na(effect)) %>%
+            ungroup
+    } else if(event.type=='band') {
+        events.fill <-
+            events %>%
+            select(sample,chrom,effect,pheno,band) %>%
+            unique %>%
+            group_by(pheno) %>%
+            spread(band,effect) %>%
+            gather(band,effect,-chrom,-pheno,-sample) %>%
+            filter(is.na(effect)) %>%
+            ungroup
+    } else {
+        events.fill <-
+            events %>%
+            select(sample,chrom,effect,pheno,span) %>%
+            unique %>%
+            group_by(pheno) %>%
+            spread(span,effect) %>%
+            gather(span,effect,-chrom,-pheno,-sample) %>%
+            filter(is.na(effect)) %>%
+            ungroup
+    }
+
+    if(length(missing.samples) > 0){
+        events %<>% bind_rows(missing.fill)
+    }
+
+    if(nrow(events.fill) > 0) {
+        events <- invisible(full_join(events, events.fill))
+    }
+
+    if(is.null(sample.order)) {
+        sample.order <- events$sample %>% unique %>% sort
+    }
+
+    # plot aesthetics
+    events <-
+        events %>%
+        filter(!is.na(sample)) %>%
+        filter_(paste('!is.na(', event.type, ')' )) %>%
+        filter(sample %in% sample.order) %>%
+        filter(!is.na(pheno)) %>%
+        # push NAs to bottom of stack
+        mutate(order=ifelse(is.na(effect),-Inf,order)) %>%
+        unique %>%
+        # fix plot ordering & assign gene factor levels
+        arrange(!is.na(effect),desc(order)) %>%
+        mutate(gene=factor(gene,levels=filter(.,!is.na(effect)) %>% .$gene %>% unique)) %>%
+        mutate(span=factor(span,levels=filter(.,!is.na(effect)) %>% .$span %>% unique)) %>%
+        # ccf binning
+        mutate(ccf=
+            ifelse(ccf==0,               'CCF = 0%',
+            ifelse(ccf>0.00 & ccf<=0.05, '0% < CCF <= 5%',
+            ifelse(ccf>0.05 & ccf<=0.20, '5% < CCF <= 20%',
+            ifelse(ccf>0.20 & ccf<=0.40, '20% < CCF <= 40%',
+            ifelse(ccf>0.40 & ccf<=0.60, '40% < CCF <= 60%',
+            ifelse(ccf>0.60 & ccf<=0.80, '60% < CCF <= 80%',
+            ifelse(ccf>0.80,             '80% < CCF <= 100%',
+            NA)))))))) %>%
+        mutate(ccf=ifelse(is.na(effect),NA,ccf)) %>%
+        mutate(ccf=factor(ccf, levels=c('CCF = 0%','0% < CCF <= 5%','5% < CCF <= 20%','20% < CCF <= 40%','40% < CCF <= 60%','60% < CCF <= 80%','80% < CCF <= 100%'))) %>%
+        mutate(clonal=ifelse(clonality=='Clonal', clonality, NA)) %>%
+        select(-order) %>%
+        mutate(sample=factor(sample, levels=sample.order))
+
+    # change working columns to NA
+    events %<>% mutate(loh=ifelse(loh == '.', NA, loh))
+
+    if(event.type=='gene') {
+        events %<>% filter(!is.na(gene))
+    } else if(event.type=='band') {
+        events %<>%
+            arrange(!is.na(effect), desc(n.band), desc(chrom), desc(band)) %>%
+            mutate(band=factor(band, levels=filter(.,!is.na(effect)) %>% .$band %>% unique)) %>%
+            filter(!is.na(band))
+    } else if( event.type=='span') {
+        events %<>% filter(!is.na(span))
+    }
+
+    return(events)
+}
+
+
+#-----------------------
+# main plotting function
+#-----------------------
+
+PlotVariants <- function(events, output.file, clonal=FALSE, cancer.gene.census=FALSE, pathogenic=FALSE, ccf=FALSE, loh=TRUE, width=7, height=7, text.size=6, event.type='gene'){
+
+    # set graphics device
+    options(device=pdf)
+
+    # rename for plot output
+    events %<>% plyr::rename(replace=c(sample='Sample', gene='Gene', band='Band', span='Span', variant='Variant', effect='Effect', cancer.gene.census='Carcinogenic', pathogenic='Pathogenic', clonal='clonal', ccf='CCF', cn='CN'), warn_duplicated=FALSE)
+
+    # plot aesthetic definitions
+    palette  <- c( 'Truncating SNV'='#C84DDD',
+                    'Frameshift In-Del'='#C17200',
+                    'Missense SNV'='#00A5A8',
+                    'Inframe In-Del'='#E44988',
+                    'Splice site variant'='#008AE9',
+                    'Upstream, start/stop, or de novo modification'='#749000',
+                    'Silent'='#666666',
+                    'Amplification'='#333399',
+                    'Deletion'='#e60000',
+                    'CCF = 0%'='#e5e5e5',
+                    `0% < CCF <= 5%`='#c7dbee',
+                    `5% < CCF <= 20%`='#a0cae0',
+                    `20% < CCF <= 40%`='#6eaed4',
+                    `40% < CCF <= 60%`='#2772b3',
+                    `60% < CCF <= 80%`='#10539a',
+                    `80% < CCF <= 100%`='#0b3269' )
+
+    # main plot params
+    if(event.type=='gene') {
+        hp <- ggplot(events, aes(Sample, Gene, drop=FALSE))
+    } else if(event.type=='band') {
+        hp <- ggplot(events, aes(Sample, Band, drop=FALSE))
+    } else {
+        hp <- ggplot(events, aes(Sample, Span, drop=FALSE))
+    }
+
+    # CCF coloring
+    if(ccf==TRUE) {
+        hp <- hp +
+        geom_tile(data=events, aes(fill=CCF, drop=FALSE), colour='white') +
+        scale_fill_manual(breaks=names(palette), values=palette, na.value='gray90', drop=FALSE)
+    } else {  # draw tiles and color
+        hp <- hp +
+        geom_tile(data=events, aes(fill=Effect, drop=FALSE), colour='white') +
+        scale_fill_manual(breaks=names(palette), values=palette, na.value='gray90', drop=FALSE)
+    }
+
+    # loh slashes
+    if(loh==TRUE & !all(is.na(events$loh))) {
+        hp <- hp + geom_segment(data=ggplot_build(hp)$data[[1]][which(events$loh=='LOH'), ],
+                         aes(x=xmin, xend=xmax, y=ymin, yend=ymax),
+                         color='white',
+                         size=1)
+    }
+
+    if(clonal==TRUE & !all(is.na(events$clonality))) {
+        hp <- hp +
+        geom_tile(data=events %>% filter(!is.na(Effect) & !is.na(clonal)), aes(colour=clonal), size=1, fill=NA) +
+        scale_color_manual(values='#DCA43E')
+    }
+
+    # if(pathogenic==TRUE & !all(is.na(events$pathogenic))) {
+    #     hp <- hp +
+    #     geom_point(data=events, aes(shape=loh, stroke=1.5), size=2, colour='#ff0015') +
+    #     scale_shape_manual(values=c(`LOH`=3), guide=guide_legend(colour = '#ff0015'))
+    # }
+
+    hp <- hp +
+    # specify legend
+    guides(colour='white') +
+    guides(colour=guide_legend(override.aes=list(alpha=1, fill=NA)))
+
+    hp <- hp +
+    # tile groups
+    facet_wrap(~pheno, nrow=1, scales='free_x') +
+    scale_x_discrete(expand=c(0, 0.5)) +
+    scale_y_discrete(expand=c(0, 0.5))
+
+    hp <- hp +
+    # theme params
+    theme( legend.title        = element_blank(),
+           panel.grid.major    = element_blank(),
+           panel.grid.minor    = element_blank(),
+           text                = element_text(size=18),
+           axis.title.x        = element_blank(),
+           axis.title.y        = element_blank(),
+           axis.text.x         = element_text(angle=90, vjust=0.5, hjust=1, margin=margin(0,10,0,0)),
+           axis.text.y         = element_text(face='italic', hjust=1),
+           axis.text           = element_text(size=text.size),
+           axis.ticks.x        = element_blank(),
+           axis.ticks.y        = element_blank(),
+           legend.key          = element_rect(colour='black', fill=NULL, size=1),
+           legend.key.size     = unit(1.8, 'lines'),
+           legend.text         = element_text(size=text.size),
+           strip.background    = element_rect(fill='white'),
+           strip.text.x        = element_text(colour='white', size=text.size*1.2),
+           panel.background    = element_rect(fill=NA, color=NA),
+           panel.border        = element_rect(fill=NA, colour='black', size=2),
+           plot.margin         = unit(c(1,1,1,1), 'pt') )
+
+    # build grob object
+    hpg <- suppressWarnings(ggplotGrob(hp))
+
+    # # count number of samples in each group
+    # plot.lengths <- events %>% split(.$pheno) %>% map(~ .x$Sample %>% unique %>% length) %>% unlist
+
+    # # get the column indexcorresponding to the panels.
+    # panelI <- hpg$layout$l[grepl('panel', hpg$layout$name)]
+
+    # # replace the default panel widths with relative heights.
+    # hpg$widths <- grid:::unit.list(hpg$widths)
+    # hpg$widths[panelI] <- lapply(plot.lengths, unit, 'null')
+
+    # # add extra width between panels
+    # for(gap in 1:(length(panelI)-1)){
+    #     hpg$widths[panelI[gap]+1]=list(unit(0.3, 'cm'))
+    # }
+
+    # draw plot
+    pdf(output.file, width, height, bg='white')
+        grid.draw(hpg)
+    dev.off()
 }
 
 

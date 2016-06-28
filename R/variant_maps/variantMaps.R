@@ -9,7 +9,7 @@
 #----------
 
 
-# // ++
+# // 
 
 suppressPackageStartupMessages(library('plyr'))
 suppressPackageStartupMessages(library('data.table'))
@@ -36,7 +36,7 @@ pacman::p_load( Vennerable,                                                     
 #--------
 
 
-# // ++
+# // 
 
 #----------------
 # program control
@@ -61,7 +61,7 @@ run.experimental     = 0
 
 sub.sub              = 0  # run samples individually
 sub.run              = 'syn_nonsyn'  # syn_nonsyn, nonsyn
-sub.nums             = 0
+sub.nums             = 8
 
 
 #-------------------
@@ -124,13 +124,14 @@ variant.plots        = FALSE
 #--------------
 
 
-# // ++
+# // 
 
 if(interactive()) {  # set detaults for interactive use
 
     opts = list( # input
                  project_config            = 'project_config.yaml',
                  samples_config            = 'samples.yaml',
+                 subsets_config            = 'subsets.yaml',
                  muts_table_in             = 'summary/mutation_summary.xlsx',
                  gene_cn_in                = 'facets/geneCN.txt',
                  seg_maf_path              = 'absolute/reviewed/SEG_MAF',
@@ -147,6 +148,7 @@ if(interactive()) {  # set detaults for interactive use
     opts.list <- list( # input
                        make_option('--project_config',             default='', help='project configuration file'),
                        make_option('--samples_config',             default='', help='sample configuration file'),
+                       make_option('--subsets_config',             default='', help='subsets configuration file'),
                        make_option('--muts_table_in',              default='', help='mutation summary file'),
                        make_option('--gene_cn_in',                 default='', help='per-gene copy number file'),
                        make_option('--cncf_path',                  default='', help='location of facets cncf files'),
@@ -159,7 +161,7 @@ if(interactive()) {  # set detaults for interactive use
                        make_option('--variants_table_out',         default='', help='all-variant output summary') )
 
     # parse input
-    parser <- OptionParser(usage="%prog [options] [project_config] [samples_config] [muts_table_in] [gene_cn_in] [cncf_path] [seg_maf_path] [muts_table_silent_out] [muts_table_out] [cnas_table_out] [variants_table_silent_out] [variants_table_out]", option_list=opts.list)
+    parser <- OptionParser(usage="%prog [options] [project_config] [samples_config] [subsets_config] [muts_table_in] [gene_cn_in] [cncf_path] [seg_maf_path] [muts_table_silent_out] [muts_table_out] [cnas_table_out] [variants_table_silent_out] [variants_table_out]", option_list=opts.list)
 
     # build options table
     opts <-
@@ -187,7 +189,7 @@ if(interactive()) {  # set detaults for interactive use
 #------------------
 
 
-# // ++
+# // 
 
 #---------------------
 # header message setup
@@ -552,7 +554,7 @@ H1('PLOT FUNCTIONS')
 #-------------------
 
 
-# // ++ plot functions
+# // 
 
 #------------------------------------
 # rename columns & clean nomenclature
@@ -712,7 +714,7 @@ FormatEvents <- function(events, col.names=NULL, drop=FALSE, allosome='merge', k
 # prepare melted table for plotting
 #----------------------------------
 
-OrgEvents <- function(events, sample.order=NULL, pheno.order, sub.sets.pheno, recurrence=1, allosome='merge', event.type='gene', run.type=NULL, debug) {
+OrgEvents <- function(events, sample.order=NULL, pheno.order=NULL, sub.sets.pheno=NULL, recurrence=1, allosome='merge', event.type='gene', run.type=NULL, debug) {
 
     # sample.order:
     #   NULL = arrange alphabetically
@@ -732,6 +734,14 @@ OrgEvents <- function(events, sample.order=NULL, pheno.order, sub.sets.pheno, re
 
     events %<>% filter(!is.na(pheno)) %>% filter(!is.na(effect) | !is.na(ccf))
 
+    if(is.null(sub.sets.pheno)) {
+        sub.sets.pheno <- events %>% select(sample, pheno) %>% unique %>% spread(pheno, pheno)
+    }
+
+    if(is.null(pheno.order)) {
+        pheno.order <- events$pheno %>% unique %>% sort
+    }
+
     # add dummy column names
     events %<>% DummyCols(col.names, debug)
 
@@ -739,7 +749,8 @@ OrgEvents <- function(events, sample.order=NULL, pheno.order, sub.sets.pheno, re
     events %<>% rowwise %>% mutate(gene=gene %>% str_split('\\|') %>% .[[1]] %>% head(1)) %>% ungroup
 
     # effect prescedence
-    events %<>%
+    events <-
+        events %>%
         select(one_of(col.names)) %>%
         unique %>%
         filter(!is.na(effect)) %>%
@@ -752,13 +763,14 @@ OrgEvents <- function(events, sample.order=NULL, pheno.order, sub.sets.pheno, re
             ifelse(effect=='Missense SNV',5,
             ifelse(effect=='Inframe In-Del',6,
             ifelse(effect=='Splice site variant',7,
-            ifelse(effect=='Upstreop, or de novo modification',8,
+            ifelse(effect=='Upstream, start/stop, or de novo modification',8,
             ifelse(effect=='Silent',9,
             NA))))))))))
 
     if(event.type=='gene') {
 
-        events %<>%
+        events <-
+            events %>%
             # remove genes with lower prescedence
             group_by(sample, gene) %>%
             arrange(gene, precedence) %>%
@@ -904,6 +916,7 @@ OrgEvents <- function(events, sample.order=NULL, pheno.order, sub.sets.pheno, re
         MergePheno(merge.cols=pheno.order, col.name='pheno') %>%
         select(sample, pheno) %>%
         filter(sample %in% missing.samples)
+
 
     if(length(missing.samples) > 0){
 
@@ -1062,7 +1075,7 @@ PlotVariants <- function(events, output.file, clonal=FALSE, cancer.gene.census=F
                          size=1)
     }
 
-    if(clonal==TRUE & !all(is.na(events$clonality))) {
+    if(clonal==TRUE & !all(is.na(events$clonal))) {
         hp <- hp +
         geom_tile(data=events %>% filter(!is.na(Effect) & !is.na(clonal)), aes(colour=clonal), size=1, fill=NA) +
         scale_color_manual(values='#DCA43E')
@@ -1212,7 +1225,7 @@ SubGroup <- function(sub.num) {
    H2('setup sub group run')
    #------------------------
 
-   # // ++
+   # // 
 
    # specify sub group info
    sub.group <- sub.groups %>% filter(group.id == sub.num) %>% mutate(extension=str_c(sub.run, '_', extension))
@@ -1241,7 +1254,7 @@ SubGroup <- function(sub.num) {
       run.variants %>%
       filter(sample %in% sub.group.samples) %>%
       MergePheno(merge.cols=sub.group.sets, col.name='pheno') %>%
-      MergePheno(merge.cols=sub.group.samples, col.name='sample.colors') %>%
+      #MergePheno(merge.cols=sub.group.samples, col.name='sample.colors') %>%
       filter(!is.na(pheno))
 
 
@@ -1344,9 +1357,9 @@ SubGroup <- function(sub.num) {
    H2('select event table columns')
    #-------------------------------
 
-   sub.variants %<>% select(class, sample, chrom, pos, span, effect, ccf, loh, clonality, cancer.gene.census, k.l.c, pheno, sample.colors) %>% mutate(sub.id=str_c(chrom, pos, span, sep='-'))
-   sub.muts %<>% select(class, sample, chrom, pos, gene, effect, ccf, loh, clonality, cancer.gene.census, k.l.c, pheno, sample.colors) %>% mutate(sub.id=str_c(chrom, pos, gene, sep='-'))
-   sub.cnas %<>% select(class, sample, chrom, pos, band, effect, ccf, loh, clonality, cancer.gene.census, k.l.c, pheno, sample.colors) %>% mutate(sub.id=str_c(chrom, pos, band, sep='-'))
+   sub.variants %<>% select(class, sample, chrom, pos, span, effect, ccf, loh, clonality, cancer.gene.census, k.l.c, pheno) %>% mutate(sub.id=str_c(chrom, pos, span, sep='-'))
+   sub.muts %<>% select(class, sample, chrom, pos, gene, effect, ccf, loh, clonality, cancer.gene.census, k.l.c, pheno) %>% mutate(sub.id=str_c(chrom, pos, gene, sep='-'))
+   sub.cnas %<>% select(class, sample, chrom, pos, band, effect, ccf, loh, clonality, cancer.gene.census, k.l.c, pheno) %>% mutate(sub.id=str_c(chrom, pos, band, sep='-'))
 
 
    # // -- sub group initialization
@@ -1355,7 +1368,7 @@ SubGroup <- function(sub.num) {
    H2('CN HEATMAP PLOTS')
    #---------------------
 
-   # // ++
+   # // 
 
    if(run.cn.heatmap.plots != FALSE) {
 
@@ -1379,71 +1392,75 @@ SubGroup <- function(sub.num) {
   H2('CASCADE PLOTS')
   #------------------
 
-   # // ++
+   # // 
 
    if(run.cascade.plots != FALSE) {
 
-      H3('muts [type] cascade plot')
+        if(nrow(sub.muts) > 0) {
 
-      sub.muts %>%
-      OrgEvents(sample.order=NULL, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=1, allosome='merge', event.type='gene', run.type=NULL, debug) %>%
-      PlotVariants( output.file = str_c(sub.group.prefix, 'mutation_heatmap/mutation_heatmap_type_', sub.group$extension, '.pdf'),
-                    clonal      = FALSE,
-                    pathogenic  = FALSE,
-                    ccf         = FALSE,
-                    loh         = FALSE,
-                    event.type  = 'gene',
-                    width       = (length(unique(.$sample))/2) + 3.3,
-                    height      = (length(unique(.$gene))/6) + 3,
-                    text.size   = 12 )
+          H3('muts [type] cascade plot')
 
-
-      H3('muts [type] [recurrent] cascade plot')
-
-      if(any(duplicated(sub.muts$gene))) {
-         sub.muts %>%
-         OrgEvents(sample.order=NULL, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=2, allosome='merge', event.type='gene', run.type=NULL, debug) %>%
-         PlotVariants( output.file = str_c(sub.group.prefix, 'mutation_heatmap/mutation_heatmap_type_recurrent_', sub.group$extension, '.pdf'),
-                       clonal      = FALSE,
-                       pathogenic  = FALSE,
-                       ccf         = FALSE,
-                       loh         = FALSE,
-                       event.type  = 'gene',
-                       width       = (length(unique(.$sample))/2) + 3.3,
-                       height      = (length(unique(.$gene))/6) + 3,
-                       text.size   = 14 )
-      }
-
-      H3('muts [CCF] cascade plot')
-
-      sub.muts %>%
-      OrgEvents(sample.order=NULL, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=1, allosome='merge', event.type='gene', run.type='ccf', debug) %>%
-      PlotVariants( output.file = str_c(sub.group.prefix, 'mutation_heatmap/mutation_heatmap_ccf_', sub.group$extension, '.pdf'),
-                    clonal      = TRUE,
-                    pathogenic  = FALSE,
-                    ccf         = TRUE,
-                    loh         = TRUE,
-                    event.type  = 'gene',
-                    width       = (length(unique(.$sample))/2) + 4,
-                    height      = (length(unique(.$gene))/6) + 3,
-                    text.size   = 12 )
+          sub.muts %>%
+          OrgEvents(sample.order=NULL, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=1, allosome='merge', event.type='gene', run.type=NULL, debug) %>%
+          PlotVariants( output.file = str_c(sub.group.prefix, 'mutation_heatmap/mutation_heatmap_type_', sub.group$extension, '.pdf'),
+                        clonal      = FALSE,
+                        pathogenic  = FALSE,
+                        ccf         = FALSE,
+                        loh         = FALSE,
+                        event.type  = 'gene',
+                        width       = (length(unique(.$sample))/2) + 3.3,
+                        height      = (length(unique(.$gene))/6) + 3,
+                        text.size   = 12 )
 
 
-      H3('muts [CCF] [recurrent] cascade plot')
+          H3('muts [type] [recurrent] cascade plot')
 
-      if(any(duplicated(sub.muts$gene))) {
-         sub.muts %>%
-         OrgEvents(sample.order=NULL, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=2, allosome='merge', event.type='gene', run.type='ccf', debug) %>%
-         PlotVariants( output.file = str_c(sub.group.prefix, 'mutation_heatmap/mutation_heatmap_ccf_recurrent_', sub.group$extension, '.pdf'),
-                       clonal      = TRUE,
-                       pathogenic  = FALSE,
-                       ccf         = TRUE,
-                       loh         = TRUE,
-                       event.type  = 'gene',
-                       width       = (length(unique(.$sample))/2) + 4,
-                       height      = (length(unique(.$gene))/6) + 3,
-                       text.size   = 14 )
-      }
+          if( sub.muts %>% select(sample, gene) %>% group_by(sample) %>% unique %>% ungroup %>% .$gene %>% duplicated %>% any ) {
+             sub.muts %>%
+             OrgEvents(sample.order=NULL, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=2, allosome='merge', event.type='gene', run.type=NULL, debug) %>%
+             PlotVariants( output.file = str_c(sub.group.prefix, 'mutation_heatmap/mutation_heatmap_type_recurrent_', sub.group$extension, '.pdf'),
+                           clonal      = FALSE,
+                           pathogenic  = FALSE,
+                           ccf         = FALSE,
+                           loh         = FALSE,
+                           event.type  = 'gene',
+                           width       = (length(unique(.$sample))/2) + 3.3,
+                           height      = (length(unique(.$gene))/6) + 3,
+                           text.size   = 14 )
+          }
+
+          H3('muts [CCF] cascade plot')
+
+          sub.muts %>%
+          OrgEvents(sample.order=NULL, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=1, allosome='merge', event.type='gene', run.type='ccf', debug) %>%
+          PlotVariants( output.file = str_c(sub.group.prefix, 'mutation_heatmap/mutation_heatmap_ccf_', sub.group$extension, '.pdf'),
+                        clonal      = TRUE,
+                        pathogenic  = FALSE,
+                        ccf         = TRUE,
+                        loh         = TRUE,
+                        event.type  = 'gene',
+                        width       = (length(unique(.$sample))/2) + 4,
+                        height      = (length(unique(.$gene))/6) + 3,
+                        text.size   = 12 )
+
+
+          H3('muts [CCF] [recurrent] cascade plot')
+
+          if( sub.muts %>% select(sample, gene) %>% group_by(sample) %>% unique %>% ungroup %>% .$gene %>% duplicated %>% any ) {
+             sub.muts %>%
+             OrgEvents(sample.order=NULL, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=2, allosome='merge', event.type='gene', run.type='ccf', debug) %>%
+             PlotVariants( output.file = str_c(sub.group.prefix, 'mutation_heatmap/mutation_heatmap_ccf_recurrent_', sub.group$extension, '.pdf'),
+                           clonal      = TRUE,
+                           pathogenic  = FALSE,
+                           ccf         = TRUE,
+                           loh         = TRUE,
+                           event.type  = 'gene',
+                           width       = (length(unique(.$sample))/2) + 4,
+                           height      = (length(unique(.$gene))/6) + 3,
+                           text.size   = 14 )
+          }
+
+    }
 
       H3('cnas cascade plot')
 
@@ -1470,7 +1487,7 @@ SubGroup <- function(sub.num) {
                         height      = (length(unique(.$gene))/6) + 3,
                         text.size   = 12 )
 
-         if(any(duplicated(sub.muts$gene))) {
+         if( sub.muts %>% select(sample, gene) %>% group_by(sample) %>% unique %>% ungroup %>% .$gene %>% duplicated %>% any ) {
             # fix sample order [recurrent]
             sample.order.2 <-
                 sub.muts %>%
@@ -1519,7 +1536,7 @@ SubGroup <- function(sub.num) {
 
           H3('VARIANTS [recurrent] cascade plot')
 
-         if(any(duplicated(sub.variants$gene))) {
+         if( sub.variants %>% select(sample, span) %>% group_by(sample) %>% unique %>% ungroup %>% .$span %>% duplicated %>% any ) {
              sub.variants %>%
              OrgEvents(sample.order=sample.order.2, pheno.order=sub.group.sets, sub.sets.pheno=sub.sets.pheno, recurrence=2, allosome='merge', event.type='span', run.type=NULL, debug) %>%
              PlotVariants( output.file = str_c(sub.group.prefix, 'variant_heatmap/variant_heatmap_type_recurrent_', sub.group$extension, '.pdf'),
@@ -1541,7 +1558,7 @@ SubGroup <- function(sub.num) {
    H2('venn diagrams')
    #------------------
 
-   # // ++
+   # // 
 
    MakeVenn <- function(sets, file.name) {
 
@@ -1617,13 +1634,13 @@ SubGroup <- function(sub.num) {
    H2('TREES')
    #----------
 
-   # // ++
+   # // 
 
    if(run.trees != FALSE) {
 
       # sub muts tree
       sub.muts.tree <- tryCatch({
-            sub.muts %>% MeltToTree(dist.method='hamming', clust.method='complete', sort.method='distance', span='span', tree.samples=sub.group.samples)
+            sub.muts %>% MeltToTree(dist.method='hamming', clust.method='complete', sort.method='distance', span='gene', tree.samples=sub.group.samples)
       }, error = function(e) {
           Warn('muts MeltToTree encountered an error, skipping')
           NULL
@@ -1631,7 +1648,7 @@ SubGroup <- function(sub.num) {
 
       # sub cnas tree
       sub.cnas.tree <- tryCatch({
-            sub.cnas %>% MeltToTree(dist.method='hamming', clust.method='complete', sort.method='distance', span='span', tree.samples=sub.group.samples)
+            sub.cnas %>% MeltToTree(dist.method='hamming', clust.method='complete', sort.method='distance', span='band', tree.samples=sub.group.samples)
       }, error = function(e) {
           Warn('cnas MeltToTree encountered an error, skipping')
           NULL
@@ -1708,7 +1725,7 @@ SubGroup <- function(sub.num) {
   H2('TREES (experimental)')
   #-------------------------
 
-   # // ++
+   # // 
 
    if(run.experimental != FALSE) {
 
@@ -1721,7 +1738,7 @@ SubGroup <- function(sub.num) {
          layout(matrix(c(1, 2), nrow=1), widths=c(10, 1))
          plot(sub.muts.tree$dend, cex.axis=6)
 
-         colored_bars(colors               = sub.muts %>% select(pheno, sample.colors),
+         colored_bars(colors               = sub.muts %>% select(pheno),
                       dend                 = sub.muts.tree$dend,
                       sort_by_labels_order = FALSE,
                       add                  = TRUE,
@@ -1729,7 +1746,7 @@ SubGroup <- function(sub.num) {
                       y_scale              = 10,
                       cex.rowLabels        = 5.8)
 
-         legend(x=3, y=3, legend=unique(sub.muts$sample), fill=unique(sub.muts$sample.colors), cex=4)
+         legend(x=3, y=3, legend=unique(sub.muts$sample), fill=unique(sub.muts$pheno), cex=4)
          legend(x=3, y=3, legend=unique(sub.muts$pheno), fill=unique(sub.muts$pheno), cex=4)
       dev.off()
 
@@ -1808,7 +1825,7 @@ SubGroup <- function(sub.num) {
    H2("FISHER'S PLOTS")
    #-------------------
 
-   # // ++
+   # // 
 
    if(run.fishers.plots != FALSE & !is.na(sub.group$b)) {
 
@@ -1876,7 +1893,7 @@ H1('INPUT & PARAMETERS')
 #-----------------------
 
 
-# // ++
+# // 
 
 #-------------
 # run settings
@@ -1901,9 +1918,22 @@ samples <-
    rowwise %>%
    mutate(normal=gsub("^\\s+|\\s+$", '', normal)) %>%
    mutate(tumor=gsub("^\\s+|\\s+$", '', tumor)) %>%
-   mutate(id=sub(name, '', tumor)) %>%
-   mutate(name=gsub("^[[:punct:]]+|[[:punct:]]+$", '', name)) %>%
    ungroup
+
+
+if('name' %in% names(samples)) {
+   samples <-
+      rowwise %>%
+      mutate(id=sub(name, '', tumor)) %>%
+      mutate(name=gsub("^[[:punct:]]+|[[:punct:]]+$", '', name)) %>%
+      ungroup
+} else {
+   samples <-
+      samples %>%
+      rowwise %>%
+      mutate(name=strsplit(tumor, 'T') %>% .[[1]] %>% head(1) %>% unlist) %>%
+      ungroup
+}
 
 
 # sample key values
@@ -1920,11 +1950,11 @@ cancer.gene.list <- read_tsv('~/share/reference/cancer+kandoth+lawrence_gene_lis
 
 # define sub.sets
 sub.sets <- list(all=keys)
-sub.sets <- c(sub.sets, samples %>% arrange(name) %>% group_by(name) %>% do(name=data.frame(select(.,tumor))) %>% lapply(FUN=function(x) {unlist(x, recursive=FALSE)}) %>% .[[1]]  %>% set_names(samples$name %>% unique %>% sort))
+sub.sets <- c(sub.sets, samples %>% arrange(name) %>% group_by(name) %>% select(name, tumor) %>% unique %>% do(name=data.frame(select(.,tumor))) %>% lapply(FUN=function(x) { unlist(x, recursive=FALSE) }) %>% .[[1]]  %>% set_names(samples$name %>% unique %>% sort))
 
-if(!is.null(config$subsets)) {
+if(file.exists(opts$subsets_config)) {
     sub.sets <- c( sub.sets,
-                   config$subsets %>% map(~ { .x %>% KeyMod(keys, debug)}) )
+                   list.load(opts$subsets_config) %>% map(~ { .x %>% KeyMod(keys, debug)}) )
 }
 
 
@@ -1993,7 +2023,7 @@ sub.groups <-
     select(group.id, n.samples, extension, comparison, everything())
 
 # add all samples as sub.set
-sub.sets <- c( sub.sets, samples$tumor %>% KeyMod(keys, debug) %>% set_names(KeyMod(., keys, debug)) %>% as.list )
+#sub.sets <- c( sub.sets, samples$tumor %>% KeyMod(keys, debug) %>% set_names(KeyMod(., keys, debug)) %>% as.list )
 
 
 if(run.data.processing != TRUE) { QuietStop('- exiting after: input & parameters //') }
@@ -2008,7 +2038,7 @@ H1('DATA PROCESSING')
 #--------------------
 
 
-# // ++
+# // 
 
 #------------------------
 H2('pheno palette colors')

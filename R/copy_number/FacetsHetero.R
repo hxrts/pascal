@@ -1,24 +1,47 @@
 #!/usr/bin/env Rscript
 
-suppressMessages(pacman::p_load(dplyr,readr,tidyr,magrittr,purrr,stringr,rlist,crayon))
+pacman::p_load(dplyr,readr,tidyr,magrittr,purrr,stringr,rlist,crayon)
 
 #------
 # input
 #------
 
-# read samples file
-samples <-
-	read.delim("sample_sets.txt",sep=" ",stringsAsFactors=FALSE,header=FALSE) %>%
-	filter(!grepl("#",V1)) %>%
-	(function(sets){
-		tumor <-
-			apply(sets,1, function(row) row %>% list.filter (.!="") %>% head(-1)) %>% unlist
-		normal <-
-			apply(sets,1, function(row) row %>% list.filter (.!="") %>% tail(1)) %>%
-			rep(apply(sets,1,function(row) row %>% list.filter(.!="") %>% length-1))
-		data.frame(normal,tumor,stringsAsFactors=FALSE) %>%
-		tbl_df
-	})
+if(file.exists('samples.yaml')) {  # use yaml file if available
+
+message(green('using samples.yaml as sample list'))
+
+	samples <-
+		list.load('samples.yaml') %>%
+		list.map(., as.data.frame(., stringsAsFactors=FALSE)) %>%
+		bind_rows %>%
+		rowwise %>%
+		mutate(normal=gsub("^\\s+|\\s+$", '', normal)) %>%
+		mutate(tumor=gsub("^\\s+|\\s+$", '', tumor)) %>%
+		ungroup
+
+} else if(file.exists('sample_sets.txt')) {  # otherwuse use sample sets file
+
+message(yellow('using sample_sets.txt as sample list'))
+
+	samples <-
+		read.delim('sample_sets.txt',sep=' ',stringsAsFactors=FALSE,header=FALSE) %>%
+		filter(!grepl("#",V1)) %>%
+		(function(sets){
+			tumor <-
+				apply(sets,1, function(row) row %>% list.filter (. != '') %>% head(-1)) %>% unlist
+			normal <-
+				apply(sets,1, function(row) row %>% list.filter (. != '') %>% tail(1)) %>%
+				rep(apply(sets,1,function(row) row %>% list.filter(. != '') %>% length-1))
+			data.frame(normal,tumor,stringsAsFactors=FALSE) %>%
+			tbl_df
+		})
+
+} else {
+
+	message(red('no sample list available'))
+
+}
+
 
 #-------------------------
 # create combined GATK vcf
@@ -28,7 +51,8 @@ vcf.paths <-
 	paste("ls ",samples$tumor %>% paste("gatk/vcf/",.,"_*.snps.filtered.vcf",sep="",collapse=" ")) %>%
 	system(intern=TRUE)
 
-system("mkdir facets/gatk_variant_input &>/dev/null")
+dir.create('facets/gatk_variant_input', recursive=TRUE, showWarnings=FALSE)
+
 
 #filter vcfs for quality & depth
 vcf.paths %>%

@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.title.main, plot.title.a, plot.title.b, allosome='none', targets.file=NULL, suffix='', threshold.a=TRUE, threshold.b=TRUE, gene.names=TRUE) {
+Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.title.main, plot.title.a, plot.title.b, allosome='none', targets.file=NULL, suffix='', muts.exact=FALSE, threshold.a=TRUE, threshold.b=TRUE, gene.names=TRUE) {
 
 #------
 # USAGE
@@ -40,8 +40,7 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
     pacman::p_load(DescTools,dplyr,readr,stringr,tidyr,broom,purrr,magrittr,rlist,crayon,colorspace,ggplot2,grid,gridExtra,RColorBrewer)
 
     # create output directory
-    system("mkdir summary/fishers_cn &>/dev/null")
-    system("mkdir summary/fishers_mut &>/dev/null")
+    MakeDirs(c('summary/fishers_cn', 'summary/fishers_mut'))
 
 
     #----------
@@ -254,10 +253,10 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         stats.melt <-
             sample.stats %>%
             mutate(pct=present*-1) %>%
-            select(Gene=gene,`P-value`=pct) %>%
+            select(Gene=gene,`P-value (-log10)`=pct) %>%
             mutate(group=factor('present'))
 
-        gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value`, fill=group, width=0.9)) +
+        gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value (-log10)`, fill=group, width=0.9)) +
 
         ggtitle(plot.title) +
 
@@ -274,14 +273,14 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
                 theme(  legend.title        = element_blank(),
                         panel.grid.major    = element_blank(),
                         panel.grid.minor    = element_blank(),
-                        text                = element_text(size=10),
+                        text                = element_text(size=14),
                         axis.title.x        = element_text(vjust=7),
-                        axis.text.x         = element_text(angle=90,vjust=0.5,hjust=1,size=7),
-                        axis.text.y         = element_text(size=7),
+                        axis.text.x         = element_text(angle=90,vjust=0.5,hjust=1,size=10),
+                        axis.text.y         = element_text(size=10),
                         legend.key          = element_rect(colour='white', fill=NULL, size=0.1),
                         legend.key.size     = unit(1.4, 'lines'),
-                        legend.text         = element_text(size=7),
-                        strip.text.x        = element_text(colour='white',size=7),
+                        legend.text         = element_text(size=10),
+                        strip.text.x        = element_text(colour='white',size=10),
                         panel.background    = element_rect(fill=NA, color='black'),
                         plot.margin         = unit(c(1,1,1,1),'cm'))
 
@@ -320,10 +319,10 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
             mutate(above=above*-1) %>%
             mutate(below=below) %>%
             gather(group, pct, -gene) %>%
-            select(Gene=gene,`P-value`=pct,group) %>%
+            select(Gene=gene,`P-value (-log10)`=pct,group) %>%
             mutate(group=factor(group,levels=c('above', 'below')))
 
-        gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value`, fill=group, width=0.9)) +
+        gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value (-log10)`, fill=group, width=0.9)) +
 
         ggtitle(plot.title) +
 
@@ -386,10 +385,10 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         stats.melt <-
             sample.stats %>%
             mutate(pct=above*-1) %>%
-            select(Gene=gene,`P-value`=pct) %>%
+            select(Gene=gene,`P-value (-log10)`=pct) %>%
             mutate(group=factor('above'))
 
-        gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value`, fill=group, width=0.9)) +
+        gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value (-log10)`, fill=group, width=0.9)) +
 
         ggtitle(plot.title) +
 
@@ -444,6 +443,7 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         gt
     }
 
+
     # fix file names
     FixName <- function(file.name) {
         file.name %>% gsub('\\s', '_', .) %>% gsub('/', '-', .)
@@ -491,15 +491,15 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         ungroup
     }
 
+
     # calculate % of cases with CN status
     MutSampleStats <- function(gene.matrix) {
         gene.matrix %>%
         gather(sample,effect,-gene,-chrom,-pos) %>%
-        filter(effect!=0) %>%
-        group_by(sample,gene) %>%
+        mutate(n.samples = n_distinct(sample)) %>%
+        group_by(sample, gene) %>%
         slice(which.min(pos)) %>%
         ungroup %>%
-        mutate(n.samples = n_distinct(sample)) %>%
         group_by(gene) %>%
         arrange(gene) %>%
         # mutation status sums
@@ -511,12 +511,13 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         mutate(mut.absent = sum(effect == 0, na.rm=TRUE)) %>%
         # over/under percentages for gain plotting
         mutate(mut.present.pct = sum(effect == 1, na.rm=TRUE)/n.samples) %>%
-        mutate(mut.absent.pct = sum(effect == 0, na.rm=TRUE)/n.samples) %>%
+        mutate(mut.absent.pct = 1 - mut.present.pct) %>%
         slice(which.min(pos)) %>%
         ungroup %>%
         select(-effect, -sample) %>%
         unique
     }
+
 
     # calculate % of cases with CN status
     CNSampleStats <- function(gene.matrix, threshold) {
@@ -575,6 +576,7 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         gene.matrix.b %<>% rename(end=stop)
     }
 
+
     message(blue('- subsetting tables to target regions'))
     if(!is.null(targets.file)){
         # read in target file, select coordinate columns & split
@@ -594,6 +596,7 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         }
     }
 
+
     # format allosome & filter for overlapping genes
     gene.matrix.a %<>% ChromMod(allosome) %>% filter(gene %in% gene.matrix.b$gene)
     gene.matrix.b %<>% ChromMod(allosome) %>% filter(gene %in% gene.matrix.a$gene)
@@ -612,20 +615,34 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
 
     if(plot.type=='mutation') {
 
+        if(muts.exact != TRUE) {
+            sample.stats <-
+                inner_join( MutSampleStats(gene.matrix.a) %>% mutate(pos=1),
+                            MutSampleStats(gene.matrix.b) %>% mutate(pos=1), by=c('gene', 'chrom', 'pos'), suffix=c('.x','.y') )
+        } else {
+            sample.stats <-
+                inner_join( MutSampleStats(gene.matrix.a),
+                            MutSampleStats(gene.matrix.b), by=c('gene','chrom','pos'), suffix=c('.x','.y') )
+        }
+
+
+        sample.stats %<>%
+            mutate(pct.tot=mut.present.pct.x+mut.present.pct.y) %>%
+            arrange(desc(pct.tot), gene) %>%
+            mutate(gene=factor(gene, levels=unique(gene)))
+
         sample.stats <-
-            inner_join( MutSampleStats(gene.matrix.a),
-                        MutSampleStats(gene.matrix.b), by=c('gene','chrom','pos'), suffix=c('.a','.b') ) %>%
-            arrange(chrom) %>%
-            ungroup %>%
+            sample.stats %>%
+            #arrange(chrom, pos) %>%
             mutate(gene=factor(gene, levels=unique(gene))) %>%
             rowwise %>%
             # call mutations Fisher's function
-            mutate(mut.fisher  = fisher.test( data.frame( a = c(mut.present.a, mut.absent.a),
-                                                          b = c(mut.present.b, mut.absent.b) ) )$p.value ) %>%
+            mutate(mut.fisher = fisher.test( data.frame( a = c(mut.present.x, mut.absent.x),
+                                                         b = c(mut.present.y, mut.absent.y) ) )$p.value ) %>%
             # p adjustments
-            mutate(mut.fisher.adj  = p.adjust(mut.fisher,  'BH')) %>%
+            mutate(mut.fisher.adj = p.adjust(mut.fisher,  'BH')) %>%
             # 0.05 cutoffs
-            mutate(mut.fisher.adj.cut  = ifelse(mut.fisher.adj < 0.05, mut.fisher.adj,  NA)) %>%
+            mutate(mut.fisher.adj.cut  = ifelse(mut.fisher.adj < 0.05, mut.fisher.adj, as.numeric(NA))) %>%
             # log
             mutate(mut.fisher.adj.cut.log = log10(mut.fisher.adj.cut))
 
@@ -633,22 +650,27 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         # tables for plotting
         sample.stats.mut.a <-
             sample.stats %>%
-            select(gene, present=mut.present.pct.a)
+            select(gene, present=mut.present.pct.x)
 
         sample.stats.mut.b <-
             sample.stats %>%
-            select(gene, present=mut.present.pct.b)
+            select(gene, present=mut.present.pct.y)
 
         sample.stats.mut.fishers <-
             sample.stats %>%
             select(gene, present=mut.fisher.adj.cut.log) %>%
-            mutate(present=ifelse(is.na(present),0,present))
-
+            mutate(present=ifelse(is.na(present), 0, present))
 
         # column selection & arrangement
-        sample.stats %<>%
-        select(gene,chrom,pos,n.samples.a,n.samples.b,mut.present.pct.a,mut.present.pct.b,mut.absent.pct.a,mut.absent.pct.b,
-        mut.fisher,mut.fisher.adj,mut.fisher.adj.cut,mut.fisher.adj.cut.log)
+        if(muts.exact != TRUE) {
+            sample.stats %<>%
+                select(gene, n.samples.x, n.samples.y, mut.present.pct.x, mut.present.pct.y, mut.absent.pct.x, mut.absent.pct.y,
+                mut.fisher, mut.fisher.adj, mut.fisher.adj.cut, mut.fisher.adj.cut.log)
+        } else {
+            sample.stats %<>%
+                select(gene, chrom, pos, n.samples.x, n.samples.y, mut.present.pct.x, mut.present.pct.y, mut.absent.pct.x, mut.absent.pct.y,
+                mut.fisher, mut.fisher.adj, mut.fisher.adj.cut, mut.fisher.adj.cut.log)
+        }
 
 
         # write data summary
@@ -673,33 +695,33 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
     } else {
 
         sample.stats <-
-            inner_join( CNSampleStats(gene.matrix.a, threshold.a), CNSampleStats(gene.matrix.b, threshold.b) %>% select(-chrom, -start, -end), by='gene', suffix=c('.a','.b') ) %>%
+            inner_join( CNSampleStats(gene.matrix.a, threshold.a), CNSampleStats(gene.matrix.b, threshold.b) %>% select(-chrom, -start, -end), by='gene' ) %>%
             arrange(chrom, start) %>%
             ungroup %>%
             mutate(gene=factor(gene,levels=unique(gene))) %>%
             rowwise %>%
             # amplifications (+)
-            mutate(amp.pos.fisher  = fisher.test( data.frame( a = c(amp.gt.a,  amp.lt.eq.a),
-                                                              b = c(amp.gt.b,  amp.lt.eq.b) ) )$p.value ) %>%
+            mutate(amp.pos.fisher  = fisher.test( data.frame( a = c(amp.gt.x,  amp.lt.eq.x),
+                                                              b = c(amp.gt.y,  amp.lt.eq.y) ) )$p.value ) %>%
             # gains (+)
-            mutate(gain.pos.fisher = fisher.test( data.frame( a = c(gain.gt.a, gain.lt.eq.a),
-                                                              b = c(gain.gt.b, gain.lt.eq.b) ) )$p.value ) %>%
+            mutate(gain.pos.fisher = fisher.test( data.frame( a = c(gain.gt.x, gain.lt.eq.x),
+                                                              b = c(gain.gt.y, gain.lt.eq.y) ) )$p.value ) %>%
             # amplifications (-)
-            mutate(amp.neg.fisher  = fisher.test( data.frame( a = c(amp.lt.a,  amp.gt.eq.a),
-                                                              b = c(amp.lt.b,  amp.gt.eq.b) ) )$p.value ) %>%
+            mutate(amp.neg.fisher  = fisher.test( data.frame( a = c(amp.lt.x,  amp.gt.eq.x),
+                                                              b = c(amp.lt.y,  amp.gt.eq.y) ) )$p.value ) %>%
             # gains (-)
-            mutate(gain.neg.fisher = fisher.test( data.frame( a = c(gain.lt.a, gain.gt.eq.a),
-                                                              b = c(gain.lt.b, gain.gt.eq.b) ) )$p.value ) %>%
+            mutate(gain.neg.fisher = fisher.test( data.frame( a = c(gain.lt.x, gain.gt.eq.x),
+                                                              b = c(gain.lt.y, gain.gt.eq.y) ) )$p.value ) %>%
             # p adjustments
             mutate(amp.pos.fisher.adj  = p.adjust(amp.pos.fisher,  'BH')) %>%
             mutate(gain.pos.fisher.adj = p.adjust(gain.pos.fisher, 'BH')) %>%
             mutate(amp.neg.fisher.adj  = p.adjust(amp.neg.fisher,  'BH')) %>%
             mutate(gain.neg.fisher.adj = p.adjust(gain.neg.fisher, 'BH')) %>%
             # 0.05 cutoffs
-            mutate(amp.pos.fisher.adj.cut  = ifelse(amp.pos.fisher.adj  < 0.05, amp.pos.fisher.adj,  NA)) %>%
-            mutate(gain.pos.fisher.adj.cut = ifelse(gain.pos.fisher.adj < 0.05, gain.pos.fisher.adj, NA)) %>%
-            mutate(amp.neg.fisher.adj.cut  = ifelse(amp.neg.fisher.adj  < 0.05, amp.neg.fisher.adj,  NA)) %>%
-            mutate(gain.neg.fisher.adj.cut = ifelse(gain.neg.fisher.adj < 0.05, gain.neg.fisher.adj, NA)) %>%
+            mutate(amp.pos.fisher.adj.cut  = ifelse(amp.pos.fisher.adj  < 0.05, amp.pos.fisher.adj,  as.numeric(NA))) %>%
+            mutate(gain.pos.fisher.adj.cut = ifelse(gain.pos.fisher.adj < 0.05, gain.pos.fisher.adj, as.numeric(NA))) %>%
+            mutate(amp.neg.fisher.adj.cut  = ifelse(amp.neg.fisher.adj  < 0.05, amp.neg.fisher.adj,  as.numeric(NA))) %>%
+            mutate(gain.neg.fisher.adj.cut = ifelse(gain.neg.fisher.adj < 0.05, gain.neg.fisher.adj, as.numeric(NA))) %>%
             # log
             mutate(amp.pos.fisher.adj.cut.log  = log10(amp.pos.fisher.adj.cut)) %>%
             mutate(gain.pos.fisher.adj.cut.log = log10(gain.pos.fisher.adj.cut)) %>%
@@ -735,15 +757,14 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
             select(gene, above=amp.pos.fisher.adj.cut.log) %>%
             mutate(above=ifelse(is.na(above),0,above))
 
-
-        # column selection & arrangement
-        sample.stats %>%
-        select(gene,chrom,start,end,n.samples.a,n.samples.b,amp.pct.a,amp.pct.b,gain.pct.a,gain.pct.b,loss.pct.a,loss.pct.b,del.pct.a,del.pct.b,
-        gain.gt.pct.a,gain.lt.pct.a,gain.gt.pct.b,gain.lt.pct.b,
-        amp.neg.fisher,amp.neg.fisher.adj,amp.neg.fisher.adj.cut,amp.neg.fisher.adj.cut.log,
-        amp.pos.fisher,amp.pos.fisher.adj,amp.pos.fisher.adj.cut,amp.pos.fisher.adj.cut.log,
-        gain.neg.fisher,gain.neg.fisher.adj,gain.neg.fisher.adj.cut,gain.neg.fisher.adj.cut.log,
-        gain.pos.fisher,gain.pos.fisher.adj,gain.pos.fisher.adj.cut,gain.pos.fisher.adj.cut.log)
+            # column selection & arrangement
+            sample.stats %<>%
+            select(gene,chrom,start,end,n.samples.a,n.samples.b,amp.pct.a,amp.pct.b,gain.pct.a,gain.pct.b,loss.pct.a,loss.pct.b,del.pct.a,del.pct.b,
+            gain.gt.pct.a,gain.lt.pct.a,gain.gt.pct.b,gain.lt.pct.b,
+            amp.neg.fisher,amp.neg.fisher.adj,amp.neg.fisher.adj.cut,amp.neg.fisher.adj.cut.log,
+            amp.pos.fisher,amp.pos.fisher.adj,amp.pos.fisher.adj.cut,amp.pos.fisher.adj.cut.log,
+            gain.neg.fisher,gain.neg.fisher.adj,gain.neg.fisher.adj.cut,gain.neg.fisher.adj.cut.log,
+            gain.pos.fisher,gain.pos.fisher.adj,gain.pos.fisher.adj.cut,gain.pos.fisher.adj.cut.log)
 
 
         # write data summary
@@ -777,6 +798,8 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
     suppressWarnings(ggsave(str_c(file.name,'.pdf'), do.call(arrangeGrob, c(gg.list, ncol=1)), device='pdf', width=12, height=12))
 
     message(green('[ done ]'))
+
+    return(sample.stats)
 
 }
 
