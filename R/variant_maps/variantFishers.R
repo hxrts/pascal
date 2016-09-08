@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.title.main, plot.title.a, plot.title.b, allosome='none', targets.file=NULL, suffix='', muts.exact=FALSE, threshold.a=TRUE, threshold.b=TRUE, gene.names=TRUE) {
+Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.title.main, plot.title.a, plot.title.b, allosome='none', targets.file=NULL, suffix='', muts.exact=FALSE, threshold.a=TRUE, threshold.b=TRUE, gene.names=TRUE, gene.order=NULL) {
 
 #------
 # USAGE
@@ -50,13 +50,24 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
     message(blue('- initializing'))
 
     # create mutation prevalence object
-    MutPrevalence <- function(sample.stats, plot.title, gene.names=TRUE) {
+    MutPrevalence <- function(sample.stats, plot.title, gene.names=TRUE, gene.order=NULL) {
 
         stats.melt <-
             sample.stats %>%
             mutate(pct=present*100) %>%
             select(Gene=gene,`Prevalance (% cases)`=pct) %>%
             mutate(group=factor('present'))
+
+        if(!is.null(gene.order)) {
+            stats.melt <-
+                stats.melt %>%
+                rowwise %>%
+                mutate(gene.ord=which(Gene==gene.order)) %>%
+                arrange(gene.ord) %>%
+                ungroup %>%
+                mutate(Gene=factor(Gene, levels=unique(Gene))) %>%
+                select(-gene.ord)
+        }
 
         gg <- ggplot(stats.melt , aes(x=Gene, y=`Prevalance (% cases)`, fill=group, width=0.9)) +
 
@@ -114,7 +125,7 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
 
 
     # create gains prevalence object
-    GainPrevalence <- function(sample.stats, plot.title, gene.names) {
+    GainPrevalence <- function(sample.stats, plot.title, gene.names, gene.order=NULL) {
 
         stats.melt <-
             sample.stats %>%
@@ -123,6 +134,17 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
             gather(group, pct, -gene) %>%
             select(Gene=gene,`Prevalance (% cases)`=pct,group) %>%
             mutate(group=factor(group,levels=c('above', 'below')))
+
+        if(!is.null(gene.order)) {
+            stats.melt <-
+                stats.melt %>%
+                rowwise %>%
+                mutate(gene.ord=which(Gene==gene.order)) %>%
+                arrange(gene.ord) %>%
+                ungroup %>%
+                mutate(Gene=factor(Gene, levels=unique(Gene))) %>%
+                select(-gene.ord)
+        }
 
         gg <- ggplot(stats.melt , aes(x=Gene, y=`Prevalance (% cases)`, fill=group, width=0.9)) +
 
@@ -183,13 +205,24 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
 
 
     # create amplifications prevalence object
-    AmpPrevalence <- function(sample.stats, plot.title, gene.names) {
+    AmpPrevalence <- function(sample.stats, plot.title, gene.names, gene.order=NULL) {
 
         stats.melt <-
             sample.stats %>%
             mutate(pct=above*100) %>%
             select(Gene=gene,`Prevalance (% cases)`=pct) %>%
             mutate(group=factor('above'))
+
+        if(!is.null(gene.order)) {
+            stats.melt <-
+                stats.melt %>%
+                rowwise %>%
+                mutate(gene.ord=which(Gene==gene.order)) %>%
+                arrange(gene.ord) %>%
+                ungroup %>%
+                mutate(Gene=factor(Gene, levels=unique(Gene))) %>%
+                select(-gene.ord)
+        }
 
         gg <- ggplot(stats.melt , aes(x=Gene, y=`Prevalance (% cases)`, fill=group, width=0.9)) +
 
@@ -248,13 +281,24 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
 
 
     # create amplifications fishers object
-    MutFishers <- function(sample.stats, plot.title, gene.names=TRUE) {
+    MutFishers <- function(sample.stats, plot.title, gene.names=TRUE, gene.order=NULL) {
 
         stats.melt <-
             sample.stats %>%
             mutate(pct=present*-1) %>%
             select(Gene=gene,`P-value (-log10)`=pct) %>%
             mutate(group=factor('present'))
+
+        if(!is.null(gene.order)) {
+            stats.melt <-
+                stats.melt %>%
+                rowwise %>%
+                mutate(gene.ord=which(Gene==gene.order)) %>%
+                arrange(gene.ord) %>%
+                ungroup %>%
+                mutate(Gene=factor(Gene, levels=unique(Gene))) %>%
+                select(-gene.ord)
+        }
 
         gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value (-log10)`, fill=group, width=0.9)) +
 
@@ -312,7 +356,7 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
 
 
     # create gains fishers object
-    GainFishers <- function(sample.stats, plot.title, gene.names) {
+    GainFishers <- function(sample.stats, plot.title, gene.names, gene.order=NULL) {
 
         stats.melt <-
             sample.stats %>%
@@ -321,6 +365,17 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
             gather(group, pct, -gene) %>%
             select(Gene=gene,`P-value (-log10)`=pct,group) %>%
             mutate(group=factor(group,levels=c('above', 'below')))
+
+        if(!is.null(gene.order)) {
+            stats.melt <-
+                stats.melt %>%
+                rowwise %>%
+                mutate(gene.ord=which(Gene==gene.order)) %>%
+                arrange(gene.ord) %>%
+                ungroup %>%
+                mutate(Gene=factor(Gene, levels=unique(Gene))) %>%
+                select(-gene.ord)
+        }
 
         gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value (-log10)`, fill=group, width=0.9)) +
 
@@ -380,13 +435,24 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
 
 
     # create amplifications fishers object
-    AmpFishers <- function(sample.stats, plot.title, gene.names) {
+    AmpFishers <- function(sample.stats, plot.title, gene.names, gene.order=NULL) {
 
         stats.melt <-
             sample.stats %>%
             mutate(pct=above*-1) %>%
             select(Gene=gene,`P-value (-log10)`=pct) %>%
             mutate(group=factor('above'))
+
+        if(!is.null(gene.order)) {
+            stats.melt <-
+                stats.melt %>%
+                rowwise %>%
+                mutate(gene.ord=which(Gene==gene.order)) %>%
+                arrange(gene.ord) %>%
+                ungroup %>%
+                mutate(Gene=factor(Gene, levels=unique(Gene))) %>%
+                select(-gene.ord)
+        }
 
         gg <- ggplot(stats.melt , aes(x=Gene, y=`P-value (-log10)`, fill=group, width=0.9)) +
 
@@ -688,9 +754,9 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         options(device="pdf")
 
         # call functions & add to plot list
-        gg.list <- list( MutPrevalence(sample.stats.mut.a, plot.title=str_c(plot.title.a, " Prevalence [Mutations]"), gene.names=gene.names),
-                         MutPrevalence(sample.stats.mut.b, plot.title=str_c(plot.title.b, " Prevalence [Mutations]"), gene.names=gene.names),
-                         MutFishers(sample.stats.mut.fishers, plot.title=str_c(plot.title.a, ' x ', plot.title.b, " Fisher's Exact [Mutations]"), gene.names=gene.names) )
+        gg.list <- list( MutPrevalence(sample.stats.mut.a, plot.title=str_c(plot.title.a, " Prevalence [Mutations]"), gene.names=gene.names, gene.order=gene.order),
+                         MutPrevalence(sample.stats.mut.b, plot.title=str_c(plot.title.b, " Prevalence [Mutations]"), gene.names=gene.names, gene.order=gene.order),
+                         MutFishers(sample.stats.mut.fishers, plot.title=str_c(plot.title.a, ' x ', plot.title.b, " Fisher's Exact [Mutations]"), gene.names=gene.names, gene.order=gene.order) )
 
     } else {
 
@@ -782,12 +848,12 @@ Fisher <- function(plot.type='mutation', gene.matrix.a, gene.matrix.b, plot.titl
         options(device="pdf")
 
         # call functions & add to plot list
-        gg.list <- list( GainPrevalence(sample.stats.gain.a, plot.title=str_c(plot.title.a, " Prevalence [Gains]"), gene.names=gene.names),
-                         GainPrevalence(sample.stats.gain.b, plot.title=str_c(plot.title.b, " Prevalence [Gains]"), gene.names=gene.names),
-                         GainFishers(sample.stats.gain.fishers, plot.title=str_c(plot.title.a, ' x ', plot.title.b, " Fisher's Exact [Gains]"), gene.names=gene.names),
-                         AmpPrevalence(sample.stats.amp.a, plot.title=str_c(plot.title.a, " Prevalence [Amplifications]"), gene.names=gene.names),
-                         AmpPrevalence(sample.stats.amp.b, plot.title=str_c(plot.title.b, " Prevalence [Amplifications]"), gene.names=gene.names),
-                         AmpFishers(sample.stats.amp.fishers, plot.title=str_c(plot.title.a, ' x ', plot.title.b, " Fisher's Exact [Amplifications]"), gene.names=gene.names) )
+        gg.list <- list( GainPrevalence(sample.stats.gain.a, plot.title=str_c(plot.title.a, " Prevalence [Gains]"), gene.names=gene.names, gene.order=gene.order),
+                         GainPrevalence(sample.stats.gain.b, plot.title=str_c(plot.title.b, " Prevalence [Gains]"), gene.names=gene.names, gene.order=gene.order),
+                         GainFishers(sample.stats.gain.fishers, plot.title=str_c(plot.title.a, ' x ', plot.title.b, " Fisher's Exact [Gains]"), gene.names=gene.names, gene.order=gene.order),
+                         AmpPrevalence(sample.stats.amp.a, plot.title=str_c(plot.title.a, " Prevalence [Amplifications]"), gene.names=gene.names, gene.order=gene.order),
+                         AmpPrevalence(sample.stats.amp.b, plot.title=str_c(plot.title.b, " Prevalence [Amplifications]"), gene.names=gene.names, gene.order=gene.order),
+                         AmpFishers(sample.stats.amp.fishers, plot.title=str_c(plot.title.a, ' x ', plot.title.b, " Fisher's Exact [Amplifications]"), gene.names=gene.names, gene.order=gene.order) )
     }
 
     #---------
