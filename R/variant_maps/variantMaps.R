@@ -391,9 +391,9 @@ H2('mutations processing')
 #-------------------------
 
 if(!is.null(tab.summary.sheet)) {
-    muts.file <- tab.summary.sheet
+   muts.file <- tab.summary.sheet
 } else {
-    muts.file <- opts$muts_table_in
+   muts.file <- opts$muts_table_in
 }
 
 # muts <-
@@ -401,31 +401,34 @@ if(!is.null(tab.summary.sheet)) {
 #     FormatEvents(keys=keys)
 
 muts <-
-    ReadMuts(muts.file) %>%
-    FormatEvents(keys=keys, col.names='all') %>%
-    FormatEvents(keys=keys) %>%
-    select(-band)
+   ReadMuts(muts.file) %>%
+   FormatEvents(keys=keys, col.names='all') %>%
+   FormatEvents(keys=keys) %>%
+   select(-band)
 
 muts %<>% RmCols(c('purity'))
 
-#bed1 <- read.delim('', sep='\t', stringsAsFactors=FALSE, skip=1, header=FALSE) %>% .[,1:3] %>% tbl_df %>% set_names(c('chrom', 'start.target', 'end.target')) %>% rowwise %>% mutate(chrom=substr(chrom, 4, nchar(chrom))) %>% ungroup %>% ChromMod(allosome='merge')
-#bed2 <- read.delim('', sep='\t', stringsAsFactors=FALSE, header=FALSE) %>% .[,1:3] %>% tbl_df %>% set_names(c('chrom', 'start.target', 'end.target')) %>% ChromMod(allosome='merge')
 
-# muts %<>%
-# left_join(bed1, by='chrom') %>%
-# filter(start.target <= pos & end.target >= pos) %>%
-# select(-start.target, -end.target) %>%
-# left_join(bed1, by='chrom') %>%
-# filter(start.target <= pos & end.target >= pos) %>%
-# select(-start.target, -end.target) %>%
-# unique
+if(intersect.bed == TRUE) {
+
+  bed1 <- read.delim('', sep='\t', stringsAsFactors=FALSE, skip=1, header=FALSE) %>% .[,1:3] %>% tbl_df %>% set_names(c('chrom', 'start.target', 'end.target')) %>% rowwise %>% mutate(chrom=substr(chrom, 4, nchar(chrom))) %>% ungroup %>% ChromMod(allosome='merge')
+  bed2 <- read.delim('', sep='\t', stringsAsFactors=FALSE, header=FALSE) %>% .[,1:3] %>% tbl_df %>% set_names(c('chrom', 'start.target', 'end.target')) %>% ChromMod(allosome='merge')
+
+  muts %<>%
+  left_join(bed1, by='chrom') %>%
+  filter(start.target <= pos & end.target >= pos) %>%
+  select(-start.target, -end.target) %>%
+  left_join(bed1, by='chrom') %>%
+  filter(start.target <= pos & end.target >= pos) %>%
+  select(-start.target, -end.target) %>%
+  unique
+
+}
 
 
-#---------------------------------
+#-------------------------------
 H2('optinoally use sufam calls')
-#---------------------------------
-
-stop()
+#-------------------------------
 
 if(use.sufam ==TRUE) {
 
